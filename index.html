@@ -4,298 +4,420 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Artjoms Rezepte</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Rezepte">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000ED3">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='115' fill='%23000ED3'/%3E%3Ctext x='256' y='340' font-size='280' text-anchor='middle'%3E🍳%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Artjoms%20Rezepte%22%2C%22short_name%22%3A%22Rezepte%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23FAF8F4%22%2C%22theme_color%22%3A%22%23000ED3%22%7D">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap" rel="stylesheet">
+
+<!-- SVG filters — tuned to match Figma Dynamic Stroke: Frequency 394%, Wiggle 30%, Smoothen 50% -->
+<svg width="0" height="0" style="position:absolute;overflow:hidden">
+  <defs>
+    <!-- Figma Dynamic Stroke equivalent: freq≈0.039, wiggle scale≈3, smoothen≈stdDev 1.5 -->
+    <filter id="wf1" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.039" numOctaves="4" seed="3" result="noise"/>
+      <feGaussianBlur in="noise" stdDeviation="1.5" result="blur"/>
+      <feDisplacementMap in="SourceGraphic" in2="blur" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <!-- Cards: slightly stronger -->
+    <filter id="wf2" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.039" numOctaves="4" seed="7" result="noise"/>
+      <feGaussianBlur in="noise" stdDeviation="1.5" result="blur"/>
+      <feDisplacementMap in="SourceGraphic" in2="blur" scale="4.5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <!-- Small elements (tags, pills, dots): tiny displacement so no double-border artifact -->
+    <filter id="wf3" x="-25%" y="-25%" width="150%" height="150%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="4" seed="5" result="noise"/>
+      <feGaussianBlur in="noise" stdDeviation="0.8" result="blur"/>
+      <feDisplacementMap in="SourceGraphic" in2="blur" scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
+
 <style>
-  :root {
-    --bg: #F7F5F2; --surface: #FFFFFF; --surface-2: #F0EDE8;
-    --text-primary: #1A1814; --text-secondary: #7A7570; --text-muted: #B0ABA5;
-    --accent: #D4563A; --accent-light: #F5E8E4;
-    --border: #E8E4DF;
-    --green: #3A9D6E; --green-light: #E4F5ED;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
-    --shadow-md: 0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.05);
-    --shadow-lg: 0 12px 32px rgba(0,0,0,.12),0 4px 8px rgba(0,0,0,.06);
-    --radius: 16px; --radius-sm: 10px;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text-primary); min-height:100vh; max-width:430px; margin:0 auto; overflow-x:hidden; }
-  .screen { display:none; min-height:100vh; }
-  .screen.active { display:block; }
-  #home,#detail,#cart,#edit,#wizard { padding-bottom:120px; }
+/*
+  ══ WIGGLE TECHNIQUE ══
+  Problem: CSS filter on a container distorts ALL children including text.
+  Solution: Place a <span class="wbo"> as FIRST child of any element needing
+  a wiggly border. This span is absolutely positioned, has the border + filter,
+  and pointer-events:none. The parent has position:relative but NO filter.
+  All sibling content (text, icons) is completely unaffected.
 
-  /* ── HOME ── */
-  .home-header { padding:52px 24px 24px; background:var(--surface); border-bottom:1px solid var(--border); }
-  .greeting-label { font-size:13px; font-weight:500; color:var(--accent); letter-spacing:.06em; text-transform:uppercase; margin-bottom:4px; }
-  .greeting-name { font-family:'Playfair Display',serif; font-size:28px; font-weight:700; line-height:1.15; }
-  .greeting-sub { font-size:15px; color:var(--text-secondary); margin-top:6px; font-weight:300; }
-  .search-wrap { padding:16px 24px 20px; background:var(--surface); }
-  .search-box { display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border); border-radius:50px; padding:11px 18px; gap:10px; transition:border-color .2s,box-shadow .2s; }
-  .search-box:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-light); }
-  .search-icon { color:var(--text-muted); flex-shrink:0; }
-  .search-input { flex:1; border:none; background:transparent; font-size:15px; font-family:'DM Sans',sans-serif; color:var(--text-primary); outline:none; }
-  .search-input::placeholder { color:var(--text-muted); }
-  .section-head { display:flex; align-items:center; justify-content:space-between; padding:20px 24px 14px; }
-  .section-title { font-family:'Playfair Display',serif; font-size:19px; font-weight:700; }
+  .wbo        = wiggly blue border overlay
+  .wbo.gray   = wiggly gray border overlay  
+  .wbo.strong = stronger wiggle (cards)
+  .wbo.nav    = top-edge only (bottom navigation)
+*/
+/* ══ WIGGLE BORDER SYSTEM ══
+   wbo = absolute border overlay with filter. z-index:0 (behind content).
+   Content siblings get z-index:1 via the sibling rule, so they sit ABOVE the wbo.
+   The border is still visible because it has no background fill — it only draws a line.
+*/
+.wbo {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid var(--blue);
+  filter: url(#wf1);
+  pointer-events: none;
+  z-index: 0;
+  background: transparent;
+}
+.wbo.gray  { border-color: var(--border); }
+.wbo.strong { filter: url(#wf2); }
+.wbo.small  { filter: url(#wf3); } /* for tags, pills, small dots */
+/* Card wbo must sit above the inner clip (z-index:1) */
+.recipe-card > .wbo { z-index: 2; }
+/* All content siblings render above the wbo border line */
+.wbo ~ * { position: relative; z-index: 1; }
 
-  /* Category filter bar */
-  .cat-bar { display:flex; gap:8px; padding:16px 24px 0; overflow-x:auto; }
-  .cat-bar::-webkit-scrollbar { display:none; }
-  .cat-pill { display:inline-flex; align-items:center; gap:5px; padding:7px 15px; border-radius:50px; font-size:13px; font-weight:500; white-space:nowrap; cursor:pointer; border:1.5px solid var(--border); background:var(--surface); color:var(--text-secondary); transition:all .15s; flex-shrink:0; font-family:'DM Sans',sans-serif; }
-  .cat-pill.active { background:var(--accent); border-color:var(--accent); color:white; }
-  .cat-pill:active { transform:scale(.95); }
-  .recipe-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:0 24px; }
-  .recipe-card { background:var(--surface); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-sm); cursor:pointer; transition:transform .18s; border:1px solid var(--border); }
-  .recipe-card:active { transform:scale(.97); }
-  .card-img-placeholder { width:100%; aspect-ratio:4/3; display:flex; align-items:center; justify-content:center; font-size:36px; background:linear-gradient(135deg,var(--surface-2) 0%,var(--border) 100%); }
-  .card-body { padding:11px 12px 13px; }
-  .card-title { font-size:13px; font-weight:600; line-height:1.3; margin-bottom:8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-  .card-tags { display:flex; flex-wrap:wrap; gap:5px; }
-  .tag { display:inline-flex; align-items:center; gap:3px; font-size:11px; color:var(--text-secondary); background:var(--surface-2); border-radius:20px; padding:3px 8px; font-weight:500; }
-  .tag.tag-accent { background:var(--accent-light); color:var(--accent); }
-  .tag.tag-wait { background:var(--surface-2); color:var(--text-secondary); }
+:root {
+  --bg: #FAF8F4;
+  --surface: #FFFFFF;
+  --surface-2: #F2EFE8;
+  --ink: #0A0A0A;
+  --ink-mid: #4A4845;
+  --ink-light: #9A9590;
+  --blue: #000ED3;
+  --blue-light: #E8EAFB;
+  --green: #1A7A4A;
+  --green-light: #E0F5EB;
+  --border: #D8D4CC;
+}
 
-  /* ── BOTTOM NAV ── */
-  .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; background:var(--surface); border-top:1px solid var(--border); display:flex; z-index:90; box-shadow:0 -2px 12px rgba(0,0,0,.06); }
-  .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px 0 14px; gap:4px; border:none; background:transparent; cursor:pointer; font-size:11px; font-weight:500; color:var(--text-muted); font-family:'DM Sans',sans-serif; transition:color .15s; position:relative; }
-  .nav-btn.active { color:var(--accent); }
-  .cart-badge { position:absolute; top:6px; right:calc(50% - 22px); background:var(--accent); color:white; font-size:10px; font-weight:700; border-radius:50%; width:17px; height:17px; display:none; align-items:center; justify-content:center; }
-  .cart-badge.visible { display:flex; }
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html { background:var(--bg); }
+body { font-family:'Satoshi',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; max-width:430px; margin:0 auto; overflow-x:hidden; }
+.screen { display:none; min-height:100vh; }
+.screen.active { display:block; }
+#home,#detail,#cart,#edit,#wizard { padding-bottom:120px; }
 
-  /* ── FAB ── */
-  .fab { position:fixed; bottom:76px; right:24px; width:52px; height:52px; border-radius:50%; background:var(--accent); color:white; border:none; box-shadow:0 4px 16px rgba(212,86,58,.4); cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:100; transition:transform .22s cubic-bezier(.34,1.56,.64,1); }
-  .fab:active { transform:scale(.93)!important; }
-  .fab.open { transform:rotate(45deg); }
-  .fab-menu { position:fixed; bottom:140px; right:24px; display:flex; flex-direction:column; gap:10px; z-index:99; pointer-events:none; opacity:0; transform:translateY(10px) scale(.95); transition:opacity .2s,transform .22s cubic-bezier(.34,1.56,.64,1); }
-  .fab-menu.open { pointer-events:auto; opacity:1; transform:translateY(0) scale(1); }
-  .fab-menu-item { display:flex; align-items:center; gap:10px; justify-content:flex-end; cursor:pointer; }
-  .fab-menu-label { background:var(--surface); color:var(--text-primary); font-size:13px; font-weight:500; padding:8px 14px; border-radius:50px; box-shadow:var(--shadow-md); border:1px solid var(--border); white-space:nowrap; }
-  .fab-menu-btn { width:42px; height:42px; border-radius:50%; background:var(--surface); border:1px solid var(--border); box-shadow:var(--shadow-md); display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
-  .fab-overlay { position:fixed; inset:0; z-index:98; display:none; }
-  .fab-overlay.open { display:block; }
+/* ── HOME HEADER ── */
+.home-header { padding:52px 24px 20px; }
+.greeting-name { font-family:'Fraunces',serif; font-style:italic; font-weight:600; letter-spacing:-0.05em; font-size:42px; color:var(--blue); line-height:1.1; margin-bottom:2px; }
+.greeting-sub { font-family:'Satoshi',sans-serif; font-size:16px; color:var(--ink-mid); }
 
-  /* ── DETAIL ── */
-  .detail-hero { position:relative; height:260px; background:var(--surface-2); overflow:hidden; }
-  .detail-hero-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:72px; background:linear-gradient(160deg,#f5ede8,#e8ddd6); }
-  .detail-back { position:absolute; top:48px; left:16px; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,.9); backdrop-filter:blur(8px); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:var(--shadow-sm); color:var(--text-primary); }
-  .detail-edit-btn { position:absolute; top:48px; right:16px; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,.9); backdrop-filter:blur(8px); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:var(--shadow-sm); color:var(--text-primary); }
-  .detail-body { padding:20px 24px 0; }
-  .detail-title { font-family:'Playfair Display',serif; font-size:24px; font-weight:700; line-height:1.25; margin-bottom:12px; }
-  .detail-meta { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
-  .meta-pill { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:500; padding:6px 12px; border-radius:50px; background:var(--surface-2); color:var(--text-secondary); }
-  .meta-pill.accent { background:var(--accent-light); color:var(--accent); }
+/* ── SEARCH ── */
+.search-wrap { padding:0 24px 16px; }
+.search-box { display:flex; align-items:center; gap:10px; background:var(--surface); border-radius:50px; padding:11px 18px; position:relative; }
+.search-icon { color:var(--ink-light); flex-shrink:0; }
+.search-input { flex:1; border:none; background:transparent; font-size:15px; font-family:'Satoshi',sans-serif; color:var(--ink); outline:none; }
+.search-input::placeholder { color:var(--ink-light); }
 
-  /* Portions */
-  .portions-bar { display:flex; align-items:center; gap:12px; background:var(--surface); border:1.5px solid var(--border); border-radius:50px; padding:8px 16px; margin-bottom:18px; width:fit-content; }
-  .portions-label { font-size:13px; color:var(--text-secondary); font-weight:500; }
-  .portions-controls { display:flex; align-items:center; gap:10px; }
-  .portions-btn { width:30px; height:30px; border-radius:50%; background:var(--surface-2); border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; line-height:1; color:var(--text-primary); font-weight:300; transition:background .15s; flex-shrink:0; font-family:'DM Sans',sans-serif; padding:0; user-select:none; }
-  .portions-btn:active { background:var(--accent-light); border-color:var(--accent); }
-  .portions-value { font-size:15px; font-weight:700; min-width:24px; text-align:center; }
+/* ── CATEGORY BAR ── */
+.cat-bar { display:flex; gap:8px; padding:0 24px 20px; overflow-x:auto; scrollbar-width:none; }
+.cat-bar::-webkit-scrollbar { display:none; }
+.cat-pill { display:inline-flex; align-items:center; padding:7px 16px; border-radius:50px; font-family:'Satoshi',sans-serif; font-size:13px; font-weight:600; white-space:nowrap; cursor:pointer; background:var(--surface); color:var(--ink-mid); flex-shrink:0; position:relative; transition:background .15s,color .15s;
+  border:none; outline:none; -webkit-appearance:none; appearance:none;
+}
+.cat-pill .wbo { filter:url(#wf3); border-color:var(--border); }
+.cat-pill.active { background:var(--blue); color:white; }
+.cat-pill.active .wbo { border-color:var(--blue); filter:url(#wf3); } /* keep wiggly, just blue */
+.cat-pill:active { transform:scale(.95); }
 
-  /* Tabs */
-  .detail-tabs { display:flex; border-bottom:1.5px solid var(--border); margin-bottom:20px; }
-  .detail-tab { flex:1; padding:11px 4px; font-size:12px; font-weight:500; text-align:center; cursor:pointer; color:var(--text-muted); border-bottom:2.5px solid transparent; margin-bottom:-1.5px; transition:color .15s,border-color .15s; white-space:nowrap; }
-  .detail-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
-  .tab-panel { display:none; }
-  .tab-panel.active { display:block; }
+/* ── SECTION HEAD ── */
+.section-head { padding:4px 24px 16px; }
+.section-title { font-family:'Fraunces',serif; font-style:italic; font-weight:600; letter-spacing:-0.05em; font-size:28px; color:var(--ink); }
 
-  /* Ingredients tab */
-  .ingredient-list { list-style:none; }
-  .ingredient-item { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); }
-  .ingredient-item:last-child { border-bottom:none; }
-  .ingredient-name { font-size:14px; }
-  .ingredient-amount { color:var(--text-secondary); font-weight:500; font-size:13px; flex-shrink:0; }
-  .add-all-btn { display:flex; align-items:center; justify-content:center; gap:7px; width:100%; padding:13px; margin-top:14px; background:var(--surface); border:1.5px solid var(--border); border-radius:50px; font-size:14px; font-weight:600; color:var(--text-primary); cursor:pointer; transition:all .2s; font-family:'DM Sans',sans-serif; }
-  .add-all-btn:active { background:var(--green-light); border-color:var(--green); color:var(--green); }
+/* ── RECIPE GRID ── */
+.recipe-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:0 24px; grid-auto-rows:1fr; }
+.recipe-card { background:transparent; border-radius:20px; cursor:pointer; transition:transform .18s; position:relative; overflow:visible; display:flex; flex-direction:column; }
+.recipe-card-clip { border-radius:20px; overflow:hidden; display:flex; flex-direction:column; flex:1; position:relative; z-index:1; background:var(--surface); }
+.recipe-card:active { transform:scale(.97); }
+.card-img { width:100%; aspect-ratio:4/3; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:42px; background:linear-gradient(135deg,#f0ecff,#dde4fd); }
+.card-body { flex:1; padding:12px 12px 14px; display:flex; flex-direction:column; justify-content:space-between; background:var(--surface); }
+.card-title { font-family:'Satoshi',sans-serif; font-size:13px; font-weight:600; line-height:1.3; margin-bottom:10px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.card-tags { display:flex; flex-wrap:wrap; gap:6px; }
 
-  /* Equipment */
-  .equipment-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); margin-bottom:10px; }
-  .equipment-list { display:flex; flex-wrap:wrap; gap:8px; }
-  .equipment-chip { display:inline-flex; align-items:center; gap:6px; background:var(--surface); border:1.5px solid var(--border); border-radius:50px; padding:7px 13px 7px 10px; font-size:13px; font-weight:500; box-shadow:var(--shadow-sm); }
+/* ── TAGS ──
+   ALL tags keep their wbo (wiggly border) regardless of filled/outline state.
+   Filled tags (.tag): blue bg, blue border via wbo
+   Outline tags (.tag-plain): transparent bg, blue border
+   Wait tags (.tag-wait): transparent bg, gray border
+*/
+.tag {
+  display:inline-flex; align-items:center; gap:3px;
+  font-family:'Satoshi',sans-serif; font-size:11px; font-weight:600;
+  padding:6px 12px; border-radius:50px;
+  position:relative; background:var(--blue); color:white;
+}
+.tag .wbo { filter:url(#wf3); border-color:var(--blue); }
+.tag.tag-plain { background:transparent; color:var(--blue); }
+.tag.tag-plain .wbo { filter:url(#wf3); border-color:var(--blue); }
+.tag.tag-wait { background:transparent; color:var(--ink-mid); }
+.tag.tag-wait .wbo { filter:url(#wf3); border-color:var(--border); }
 
-  /* Timeline */
-  .timeline { position:relative; padding-left:40px; }
-  .timeline::before { content:''; position:absolute; left:11px; top:22px; bottom:14px; width:2px; background:linear-gradient(to bottom,var(--accent),var(--border)); border-radius:2px; }
-  .timeline-step { position:relative; margin-bottom:20px; }
-  .timeline-step:last-child { margin-bottom:0; }
-  .timeline-dot { position:absolute; left:-40px; top:14px; width:24px; height:24px; border-radius:50%; background:var(--surface); border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--text-muted); cursor:pointer; transition:all .2s; z-index:1; }
-  .timeline-step.done .timeline-dot { background:var(--accent); border-color:var(--accent); color:white; }
-  .timeline-step.active-step .timeline-dot { background:var(--accent-light); border-color:var(--accent); color:var(--accent); box-shadow:0 0 0 4px var(--accent-light); }
-  .timeline-step.wait-step .timeline-dot { background:var(--surface-2); border-color:var(--text-muted); color:var(--text-muted); }
-  .timeline-step.done.wait-step .timeline-dot { background:var(--text-muted); color:white; }
-  .timeline-content { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 16px; box-shadow:var(--shadow-sm); transition:all .2s; }
-  .timeline-step.active-step .timeline-content { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-light),var(--shadow-sm); }
-  .timeline-step.wait-step .timeline-content { border-color:var(--border); background:var(--surface); }
-  .timeline-step.done .timeline-content { opacity:.5; }
-  .timeline-step-num { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--accent); margin-bottom:3px; }
-  .timeline-step.wait-step .timeline-step-num { color:var(--text-muted); }
-  .timeline-step.done .timeline-step-num { color:var(--text-muted); }
-  .wait-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; color:var(--text-secondary); background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:2px 8px; margin-bottom:5px; }
-  .timeline-tip { display:flex; align-items:flex-start; gap:6px; margin-top:10px; background:var(--surface); border-radius:8px; padding:8px 10px; font-size:12px; color:var(--text-secondary); line-height:1.4; border:1px solid var(--border); }
-  .timeline-text { font-size:14px; line-height:1.55; }
-  .timeline-ingredients { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
-  .ti-chip { font-size:11px; font-weight:600; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:3px 9px; color:var(--text-secondary); }
-  .step-footer { display:flex; align-items:center; justify-content:space-between; margin-top:12px; gap:8px; }
+/* ── BOTTOM NAV ── */
+.bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; background:var(--surface); display:flex; z-index:90; }
+/* Wiggly top border for nav — separate element, not on the nav itself */
+.nav-wiggle-border { position:absolute; top:0; left:0; right:0; height:0; border-top:2.5px solid var(--blue); filter:url(#wf1); pointer-events:none; z-index:0; }
+.nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px 0 16px; gap:4px; border:none; background:transparent; cursor:pointer; font-size:11px; font-weight:600; color:var(--ink-light); font-family:'DM Sans',sans-serif; transition:color .15s; position:relative; z-index:1; }
+.nav-btn.active { color:var(--blue); }
+.cart-badge { position:absolute; top:6px; right:calc(50% - 22px); background:var(--blue); color:white; font-size:10px; font-weight:700; border-radius:50%; width:17px; height:17px; display:none; align-items:center; justify-content:center; }
+.cart-badge.visible { display:flex; }
 
-  /* Inline timer */
-  .inline-timer { display:flex; align-items:center; gap:8px; background:var(--surface-2); border:1.5px solid var(--border); border-radius:50px; padding:5px 5px 5px 12px; transition:all .2s; }
-  .inline-timer.running { background:#FFF8E1; border-color:#F5C518; }
-  .inline-timer.finished { background:var(--green-light); border-color:var(--green); }
-  .inline-timer-time { font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; color:var(--text-primary); min-width:40px; font-family:'DM Sans',sans-serif; }
-  .inline-timer.running .inline-timer-time { color:#7A5C00; }
-  .inline-timer.finished .inline-timer-time { color:var(--green); }
-  .inline-timer-progress { flex:1; height:3px; background:var(--border); border-radius:3px; overflow:hidden; min-width:30px; }
-  .inline-timer-bar { height:100%; background:#F5C518; border-radius:3px; transition:width 1s linear; }
-  .inline-timer.finished .inline-timer-bar { background:var(--green); }
-  .inline-timer-btn { width:26px; height:26px; border-radius:50%; flex-shrink:0; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:11px; background:rgba(0,0,0,.07); color:var(--text-primary); transition:all .15s; }
-  .inline-timer.running .inline-timer-btn { background:rgba(245,197,24,.3); }
-  .inline-timer.finished .inline-timer-btn { background:var(--green); color:white; }
-  .step-check-btn { font-size:12px; font-weight:600; color:var(--accent); background:var(--accent-light); border:none; border-radius:50px; padding:6px 14px; cursor:pointer; transition:background .15s; font-family:'DM Sans',sans-serif; }
-  .step-check-btn:active { background:#eacdc5; }
-  .timeline-step.done .step-check-btn { background:var(--surface-2); color:var(--text-muted); }
+/* ── FAB ── */
+.fab { position:fixed; bottom:78px; right:24px; width:54px; height:54px; border-radius:42% 58% 55% 45% / 48% 44% 56% 52%; background:var(--blue); color:white; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:100; transition:transform .22s cubic-bezier(.34,1.56,.64,1); box-shadow:3px 3px 0 rgba(0,0,0,0.3); }
+.fab:active { transform:scale(.92)!important; }
+.fab.open { transform:rotate(45deg); }
+.fab-menu { position:fixed; bottom:144px; right:24px; display:flex; flex-direction:column; gap:10px; z-index:99; pointer-events:none; opacity:0; transform:translateY(10px) scale(.95); transition:opacity .2s,transform .22s cubic-bezier(.34,1.56,.64,1); }
+.fab-menu.open { pointer-events:auto; opacity:1; transform:translateY(0) scale(1); }
+.fab-menu-item { display:flex; align-items:center; gap:10px; justify-content:flex-end; cursor:pointer; }
+.fab-menu-label { background:var(--surface); color:var(--ink); padding:8px 16px; border-radius:50px; white-space:nowrap; font-family:'Satoshi',sans-serif; font-size:14px; font-weight:600; position:relative; box-shadow:2px 2px 0 var(--ink); }
+.fab-menu-icon { width:44px; height:44px; border-radius:50%; background:var(--surface); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; position:relative; box-shadow:2px 2px 0 var(--ink); }
+.fab-overlay { position:fixed; inset:0; z-index:98; display:none; }
+.fab-overlay.open { display:block; }
 
-  /* ── CART ── */
-  .cart-header { padding:52px 24px 20px; background:var(--surface); border-bottom:1px solid var(--border); }
-  .cart-title { font-family:'Playfair Display',serif; font-size:26px; font-weight:700; }
-  .cart-subtitle { font-size:14px; color:var(--text-secondary); margin-top:4px; }
-  .cart-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 40px; text-align:center; color:var(--text-muted); gap:12px; }
-  .cart-empty-icon { font-size:52px; opacity:.6; }
-  .cart-empty-text { font-size:15px; font-weight:500; color:var(--text-secondary); }
-  .cart-empty-sub { font-size:13px; }
-  .cart-section { padding:16px 24px 0; }
-  .cart-section-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }
-  .cart-clear-btn { font-size:11px; font-weight:500; color:var(--accent); cursor:pointer; text-transform:none; letter-spacing:0; }
-  .cart-list { list-style:none; background:var(--surface); border-radius:var(--radius); overflow:hidden; border:1px solid var(--border); box-shadow:var(--shadow-sm); }
-  .cart-item { display:flex; align-items:center; gap:12px; padding:13px 16px; border-bottom:1px solid var(--border); cursor:pointer; }
-  .cart-item:last-child { border-bottom:none; }
-  .cart-item.checked { background:var(--surface-2); }
-  .cart-checkbox { width:22px; height:22px; border-radius:50%; border:2px solid var(--border); background:var(--surface); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; }
-  .cart-item.checked .cart-checkbox { background:var(--green); border-color:var(--green); }
-  .cart-item-name { font-size:14px; font-weight:500; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transition:color .15s; }
-  .cart-item.checked .cart-item-name { color:var(--text-muted); text-decoration:line-through; }
-  .cart-item-amount { font-size:13px; font-weight:600; color:var(--text-secondary); flex-shrink:0; }
-  .cart-item.checked .cart-item-amount { color:var(--text-muted); }
-  .cart-remove-btn { width:24px; height:24px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); cursor:pointer; flex-shrink:0; }
+/* ── DETAIL ── */
+.detail-hero { position:relative; height:280px; background:linear-gradient(135deg,#dde4fd,#e8ecff); overflow:hidden; }
+.detail-hero-emoji { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:80px; }
+/* No CSS border — wbo provides wiggly border */
+.detail-back { position:absolute; top:48px; left:16px; width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,.92); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.detail-edit-btn { position:absolute; top:48px; right:16px; width:42px; height:42px; border-radius:50%; background:rgba(255,255,255,.92); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.detail-body { padding:20px 24px 0; }
+.detail-title { font-family:'Fraunces',serif; font-style:italic; font-weight:600; letter-spacing:-0.05em; font-size:32px; line-height:1.2; margin-bottom:12px; }
+.detail-meta { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+/* meta-pill: same as tags — filled with wbo border always visible */
+.meta-pill { display:inline-flex; align-items:center; gap:5px; font-family:'Satoshi',sans-serif; font-weight:600; font-size:12px; padding:5px 13px; border-radius:50px; background:var(--blue); color:white; position:relative; }
+.meta-pill .wbo { filter:url(#wf3); border-color:var(--blue); }
+.meta-pill.plain { background:transparent; color:var(--blue); }
+.meta-pill.plain .wbo { filter:url(#wf3); border-color:var(--blue); }
 
-  /* ── EDIT / WIZARD SCREENS ── */
-  .editor-header { padding:52px 24px 20px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
-  .editor-back { width:36px; height:36px; border-radius:50%; background:var(--surface-2); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; color:var(--text-primary); }
-  .editor-title { font-family:'Playfair Display',serif; font-size:22px; font-weight:700; flex:1; }
-  .editor-save-btn { background:var(--accent); color:white; border:none; border-radius:50px; padding:8px 18px; font-size:13px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; flex-shrink:0; }
-  .editor-body { padding:20px 24px; display:flex; flex-direction:column; gap:18px; }
+/* Portions */
+.portions-bar { display:inline-flex; align-items:center; gap:12px; background:var(--surface); border-radius:50px; padding:7px 16px; margin-bottom:18px; position:relative; }
+.portions-label { font-family:'Satoshi',sans-serif; font-size:13px; color:var(--ink-mid); font-weight:500; }
+.portions-controls { display:flex; align-items:center; gap:10px; }
+.portions-btn { width:30px; height:30px; border-radius:50%; background:var(--blue-light); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px; line-height:1; color:var(--blue); transition:background .15s; flex-shrink:0; font-family:'Satoshi',sans-serif; position:relative; }
+.portions-btn:active { background:var(--blue); color:white; }
+.portions-value { font-size:16px; font-weight:700; min-width:24px; text-align:center; color:var(--blue); }
 
-  /* Wizard steps */
-  .wizard-progress { display:flex; gap:6px; padding:16px 24px 0; }
-  .wizard-step-dot { flex:1; height:4px; border-radius:4px; background:var(--border); transition:background .3s; }
-  .wizard-step-dot.done { background:var(--accent); }
-  .wizard-step-dot.active { background:var(--accent); opacity:.5; }
-  .wizard-panel { display:none; padding:20px 24px; flex-direction:column; gap:16px; }
-  .wizard-panel.active { display:flex; }
-  .wizard-nav { display:flex; gap:10px; padding:0 24px 20px; }
-  .wizard-btn { flex:1; padding:13px; border-radius:50px; font-size:14px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all .15s; border:1.5px solid var(--border); }
-  .wizard-btn.primary { background:var(--accent); color:white; border-color:var(--accent); }
-  .wizard-btn.secondary { background:var(--surface-2); color:var(--text-primary); }
+/* Tabs — extra bottom padding for spacing. SVG underline drawn by JS */
+.detail-tabs { display:flex; position:relative; margin-bottom:28px; padding-bottom:14px; }
+.detail-tab { flex:1; padding:10px 4px; font-family:'Satoshi',sans-serif; font-size:13px; font-weight:600; text-align:center; cursor:pointer; color:var(--ink-light); transition:color .15s; }
+.detail-tab.active { color:var(--blue); }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
 
-  /* Form elements */
-  .form-group { display:flex; flex-direction:column; gap:6px; }
-  .form-label { font-size:12px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.06em; }
-  .form-input,.form-textarea,.form-select { width:100%; background:var(--surface-2); border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; font-size:14px; font-family:'DM Sans',sans-serif; color:var(--text-primary); outline:none; transition:border-color .2s; }
-  .form-input:focus,.form-textarea:focus,.form-select:focus { border-color:var(--accent); }
-  .form-textarea { min-height:80px; resize:vertical; }
-  .form-select { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23B0ABA5' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; }
-  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .form-row-3 { display:grid; grid-template-columns:1fr 80px 80px; gap:8px; }
+/* Ingredients */
+.ingredient-list { list-style:none; }
+/* Wrap entire ingredient list in a wiggly surface card */
+.ingredient-card { background:var(--surface); border-radius:16px; position:relative; padding:0 16px; margin-bottom:4px; }
+.ingredient-card > .wbo { filter:url(#wf1); }
+.ingredient-item { display:flex; align-items:center; justify-content:space-between; padding:12px 0; position:relative; }
+.ingredient-name { font-family:'Satoshi',sans-serif; font-size:14px; }
+.ingredient-amount { font-family:'Satoshi',sans-serif; color:var(--ink-mid); font-weight:600; font-size:13px; flex-shrink:0; }
+.add-all-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:13px; margin-top:14px; background:var(--surface); border-radius:50px; font-family:'Satoshi',sans-serif; font-size:14px; font-weight:600; color:var(--blue); cursor:pointer; border:none; transition:background .15s,color .15s; position:relative; }
+.add-all-btn .wbo { filter:url(#wf3); border-color:var(--blue); }
+.add-all-btn:active { background:var(--blue); color:white; }
 
-  /* Dynamic list items */
-  .list-items { display:flex; flex-direction:column; gap:8px; }
-  .list-item-row { display:flex; align-items:center; gap:8px; }
-  .list-item-row .form-input { flex:1; }
-  .remove-item-btn { width:32px; height:32px; border-radius:50%; background:var(--surface-2); border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-muted); flex-shrink:0; font-size:16px; transition:all .15s; }
-  .remove-item-btn:active { background:#fde8e4; border-color:var(--accent); color:var(--accent); }
-  .add-item-btn { display:flex; align-items:center; gap:6px; background:transparent; border:1.5px dashed var(--border); border-radius:var(--radius-sm); padding:10px 14px; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; width:100%; justify-content:center; font-family:'DM Sans',sans-serif; transition:all .15s; }
-  .add-item-btn:active { border-color:var(--accent); color:var(--accent); }
+/* Equipment */
+.equipment-label { font-family:'Satoshi',sans-serif; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-light); margin-bottom:10px; }
+.equipment-list { display:flex; flex-wrap:wrap; gap:8px; }
+.equipment-chip { display:inline-flex; align-items:center; gap:6px; font-family:'Satoshi',sans-serif; background:var(--surface); border-radius:50px; padding:7px 13px 7px 10px; font-size:13px; position:relative; }
 
-  /* Section divider */
-  .form-section-title { font-size:16px; font-weight:700; color:var(--text-primary); padding-bottom:4px; border-bottom:1.5px solid var(--border); }
+/* Timeline */
+.timeline { position:relative; padding-left:40px; }
+.timeline-step { position:relative; margin-bottom:20px; }
+.timeline-step:last-child { margin-bottom:0; }
+.timeline-dot-wrap { position:absolute; left:-40px; top:14px; width:24px; height:24px; }
+.timeline-dot { position:relative; width:24px; height:24px; border-radius:50%; background:var(--surface); display:flex; align-items:center; justify-content:center; font-family:'Satoshi',sans-serif; font-size:10px; font-weight:700; color:var(--ink-light); cursor:pointer; transition:background .2s,color .2s; }
+.timeline-dot .wbo { border-color:var(--border); filter:url(#wf3); }
+.timeline-step.active-step .timeline-dot { background:var(--blue-light); color:var(--blue); box-shadow:0 0 0 4px var(--blue-light); }
+.timeline-step.active-step .timeline-dot .wbo { border-color:var(--blue); }
+.timeline-step.done .timeline-dot { background:var(--blue); color:white; }
+.timeline-step.done .timeline-dot .wbo { border-color:var(--blue); }
+.timeline-step.wait-step .timeline-dot { background:var(--surface-2); }
+.timeline-step.wait-step .timeline-dot .wbo { border-color:var(--ink-light); }
 
-  /* Step type toggle */
-  .step-type-row { display:flex; gap:8px; }
-  .step-type-btn { flex:1; padding:8px; border-radius:var(--radius-sm); border:1.5px solid var(--border); font-size:12px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; background:var(--surface-2); color:var(--text-secondary); transition:all .15s; text-align:center; }
-  .step-type-btn.active-cook { background:var(--accent-light); border-color:var(--accent); color:var(--accent); }
-  .step-type-btn.active-wait { background:var(--blue-light); border-color:var(--blue); color:var(--blue); }
+.timeline-content { background:var(--surface); border-radius:12px; padding:14px 16px; transition:background .2s; position:relative; }
+.timeline-content .wbo { border-color:var(--border); }
+.timeline-step.active-step .timeline-content { background:var(--blue-light); }
+.timeline-step.active-step .timeline-content .wbo { border-color:var(--blue); }
+.timeline-step.wait-step .timeline-content { background:var(--surface-2); }
+.timeline-step.done .timeline-content { opacity:.5; }
 
-  /* Modals */
-  .modal-overlay { position:fixed; inset:0; background:rgba(26,24,20,.45); backdrop-filter:blur(4px); z-index:200; display:none; align-items:flex-end; }
-  .modal-overlay.open { display:flex; }
-  .modal-sheet { background:var(--surface); border-radius:24px 24px 0 0; width:100%; padding:20px 24px 40px; transform:translateY(100%); transition:transform .3s cubic-bezier(.32,.72,0,1); }
-  .modal-overlay.open .modal-sheet { transform:translateY(0); }
-  .modal-handle { width:36px; height:4px; background:var(--border); border-radius:4px; margin:0 auto 20px; }
-  .modal-title { font-family:'Playfair Display',serif; font-size:20px; font-weight:700; margin-bottom:18px; }
-  .btn-primary { width:100%; background:var(--accent); color:white; border:none; border-radius:50px; padding:15px; font-size:15px; font-weight:600; font-family:'DM Sans',sans-serif; cursor:pointer; margin-top:8px; transition:background .15s,transform .1s; }
-  .btn-primary:active { transform:scale(.98); background:#c04a30; }
+.timeline-step-num { font-family:'Satoshi',sans-serif; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--blue); margin-bottom:5px; }
+.timeline-step.wait-step .timeline-step-num { color:var(--ink-light); }
+.wait-badge { display:inline-flex; align-items:center; gap:4px; font-family:'Satoshi',sans-serif; font-size:10px; font-weight:700; color:var(--ink-mid); background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:2px 8px; margin-bottom:5px; }
+.timeline-text { font-family:'Satoshi',sans-serif; font-size:14px; line-height:1.55; }
+.timeline-ingredients { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+.ti-chip { font-family:'Satoshi',sans-serif; font-size:11px; font-weight:600; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:3px 9px; color:var(--ink-mid); }
+.timeline-tip { display:flex; align-items:flex-start; gap:6px; margin-top:10px; background:rgba(0,14,211,.06); border-radius:8px; padding:8px 10px; font-family:'Satoshi',sans-serif; font-size:12px; color:var(--ink-mid); line-height:1.4; }
+.step-footer { display:flex; align-items:center; justify-content:space-between; margin-top:12px; gap:8px; }
 
-  ::-webkit-scrollbar { display:none; }
-  * { scrollbar-width:none; }
+/* Inline timer */
+.inline-timer { display:flex; align-items:center; gap:8px; background:var(--surface-2); border:1.5px solid var(--border); border-radius:50px; padding:5px 5px 5px 12px; transition:all .2s; }
+.inline-timer.running { background:#FFF8E1; border-color:#F5C518; }
+.inline-timer.finished { background:var(--green-light); border-color:var(--green); }
+.inline-timer-time { font-family:'Satoshi',sans-serif; font-size:13px; font-weight:700; color:var(--ink); min-width:40px; }
+.inline-timer-progress { flex:1; height:3px; background:var(--border); border-radius:3px; overflow:hidden; min-width:30px; }
+.inline-timer-bar { height:100%; background:#F5C518; border-radius:3px; transition:width 1s linear; }
+.inline-timer.finished .inline-timer-bar { background:var(--green); }
+.inline-timer-btn { width:26px; height:26px; border-radius:50%; border:none; background:rgba(0,14,211,.1); color:var(--blue); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11px; transition:all .15s; }
+.inline-timer.finished .inline-timer-btn { background:var(--green); color:white; }
+/* step-check-btn: wiggly outline via wbo before clicked, green filled when done */
+.step-check-btn { font-family:'Satoshi',sans-serif; font-size:12px; font-weight:600; color:var(--blue); background:transparent; border:none; border-radius:50px; padding:6px 14px; cursor:pointer; transition:all .15s; position:relative; }
+.step-check-btn .wbo { filter:url(#wf3); border-color:var(--blue); }
+.step-check-btn:active { background:var(--blue); color:white; }
+.timeline-step.done .step-check-btn { color:white; background:var(--green); }
+.timeline-step.done .step-check-btn .wbo { border-color:var(--green); }
+
+/* ── CART ── */
+.cart-header { padding:52px 24px 20px; }
+.cart-title { font-family:'Fraunces',serif; font-style:italic; font-weight:600; letter-spacing:-0.05em; font-size:36px; }
+.cart-subtitle { font-family:'Satoshi',sans-serif; font-size:14px; color:var(--ink-mid); margin-top:4px; }
+.cart-empty { display:flex; flex-direction:column; align-items:center; padding:80px 40px; text-align:center; gap:12px; }
+.cart-empty-icon { font-size:52px; opacity:.5; }
+.cart-empty-text { font-family:'Fraunces',serif; font-style:italic; font-weight:600; letter-spacing:-0.04em; font-size:22px; color:var(--ink-mid); }
+.cart-empty-sub { font-family:'Satoshi',sans-serif; font-size:13px; color:var(--ink-light); }
+.cart-section { padding:16px 24px 0; }
+.cart-section-title { font-family:'Satoshi',sans-serif; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-light); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }
+.cart-clear-btn { font-family:'Satoshi',sans-serif; font-size:11px; font-weight:600; color:var(--blue); cursor:pointer; text-transform:none; letter-spacing:0; }
+.cart-list { list-style:none; background:var(--surface); border-radius:16px; overflow:hidden; position:relative; }
+.cart-item { display:flex; align-items:center; gap:12px; padding:13px 16px; border-bottom:1px solid var(--border); cursor:pointer; }
+.cart-item:last-child { border-bottom:none; }
+.cart-item.checked { background:var(--surface-2); }
+.cart-checkbox { width:22px; height:22px; border-radius:50%; border:2px solid var(--border); background:var(--surface); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; }
+.cart-item.checked .cart-checkbox { background:var(--green); border-color:var(--green); }
+.cart-item-name { font-family:'Satoshi',sans-serif; font-size:14px; font-weight:500; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cart-item.checked .cart-item-name { color:var(--ink-light); text-decoration:line-through; }
+.cart-item-amount { font-family:'Satoshi',sans-serif; font-size:13px; font-weight:600; color:var(--ink-mid); flex-shrink:0; }
+.cart-remove-btn { width:24px; height:24px; display:flex; align-items:center; justify-content:center; color:var(--ink-light); cursor:pointer; flex-shrink:0; }
+
+/* ── EDITOR / WIZARD ── */
+.editor-header { padding:52px 24px 18px; display:flex; align-items:center; gap:12px; border-bottom:2px solid var(--border); }
+.editor-back { width:38px; height:38px; border-radius:50%; background:var(--surface); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; position:relative; }
+.editor-back .wbo { filter:url(#wf3); border-color:var(--border); }
+.editor-title { font-family:'Fraunces',serif; font-style:italic; font-weight:600; letter-spacing:-0.05em; font-size:26px; flex:1; }
+.editor-delete-btn { background:transparent; color:#CC2200; border:none; border-radius:50px; padding:9px 16px; font-family:'Satoshi',sans-serif; font-size:13px; font-weight:600; cursor:pointer; flex-shrink:0; }
+.editor-save-btn { background:var(--blue); color:white; border:none; border-radius:50px; padding:9px 20px; font-family:'Satoshi',sans-serif; font-size:13px; font-weight:600; cursor:pointer; flex-shrink:0; position:relative; }
+.editor-save-btn .wbo { filter:url(#wf3); border-color:var(--blue); }
+.editor-body { padding:20px 24px; display:flex; flex-direction:column; gap:18px; }
+.wizard-progress { display:flex; gap:6px; padding:16px 24px 0; }
+.wizard-step-dot { flex:1; height:4px; border-radius:4px; background:var(--border); transition:background .3s; }
+.wizard-step-dot.done,.wizard-step-dot.active { background:var(--blue); }
+.wizard-step-dot.active { opacity:.5; }
+.wizard-panel { display:none; padding:20px 24px; flex-direction:column; gap:16px; }
+.wizard-panel.active { display:flex; }
+.wizard-nav { display:flex; gap:10px; padding:0 24px 20px; }
+.wizard-btn { flex:1; padding:13px; border-radius:50px; font-family:'Satoshi',sans-serif; font-size:14px; font-weight:600; cursor:pointer; border:none; position:relative; }
+.wizard-btn.primary { background:var(--blue); color:white; }
+.wizard-btn.primary .wbo { filter:url(#wf3); border-color:var(--blue); }
+.wizard-btn.secondary { background:var(--surface-2); color:var(--ink); }
+.wizard-btn.secondary .wbo { filter:url(#wf3); border-color:var(--border); }
+.form-group { display:flex; flex-direction:column; gap:6px; }
+.form-label { font-family:'Satoshi',sans-serif; font-size:11px; font-weight:700; color:var(--ink-mid); text-transform:uppercase; letter-spacing:.06em; }
+/* Form inputs: filled background with wiggly border via wrapping div */
+.form-input,.form-textarea { width:100%; background:var(--surface); border:none; border-radius:10px; padding:12px 14px; font-family:'Satoshi',sans-serif; font-size:14px; color:var(--ink); outline:none; }
+.form-input-wrap { position:relative; border-radius:10px; }
+.form-input-wrap .wbo { filter:url(#wf3); border-color:var(--border); border-radius:10px; }
+.form-input-wrap:focus-within .wbo { border-color:var(--blue); }
+.form-textarea { min-height:80px; resize:vertical; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.form-section-title { font-family:'Fraunces',serif; font-style:italic; font-weight:600; letter-spacing:-0.05em; font-size:22px; padding-bottom:4px; border-bottom:2px solid var(--border); }
+.list-items { display:flex; flex-direction:column; gap:8px; }
+.list-item-row { display:flex; align-items:center; gap:8px; }
+.list-item-row .form-input { flex:1; }
+.remove-item-btn { width:32px; height:32px; border-radius:50%; background:var(--surface-2); border:2px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-light); flex-shrink:0; font-size:16px; }
+.add-item-btn { display:flex; align-items:center; gap:6px; background:transparent; border:2px dashed var(--border); border-radius:10px; padding:10px 14px; font-family:'Satoshi',sans-serif; font-size:13px; font-weight:600; color:var(--ink-light); cursor:pointer; width:100%; justify-content:center; }
+.step-type-row { display:flex; gap:8px; }
+.step-type-btn { flex:1; padding:8px; border-radius:10px; border:2px solid var(--border); font-family:'Satoshi',sans-serif; font-size:12px; font-weight:600; cursor:pointer; background:var(--surface-2); color:var(--ink-mid); text-align:center; }
+.step-type-btn.active-cook { background:var(--blue-light); border-color:var(--blue); color:var(--blue); }
+.step-type-btn.active-wait { background:var(--surface-2); border-color:var(--ink-light); }
+
+/* Modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(10,10,10,.5); backdrop-filter:blur(4px); z-index:200; display:none; align-items:flex-end; }
+.modal-overlay.open { display:flex; }
+.modal-sheet { background:var(--surface); border-radius:24px 24px 0 0; width:100%; padding:20px 24px 40px; transform:translateY(100%); transition:transform .3s cubic-bezier(.32,.72,0,1); position:relative; border-top:3px solid var(--blue); }
+.modal-overlay.open .modal-sheet { transform:translateY(0); }
+.modal-handle { width:36px; height:4px; background:var(--border); border-radius:4px; margin:0 auto 20px; }
+.modal-title { font-family:'Fraunces',serif; font-style:italic; font-weight:600; letter-spacing:-0.05em; font-size:26px; margin-bottom:18px; }
+.btn-primary { width:100%; background:var(--blue); color:white; border:none; border-radius:50px; padding:15px; font-family:'Satoshi',sans-serif; font-size:15px; font-weight:600; cursor:pointer; margin-top:8px; }
+
+/* Checkerboard background at 3% opacity */
+.bg-pattern { position:fixed; inset:0; pointer-events:none; z-index:0; max-width:430px; margin:0 auto;
+  background-image:
+    linear-gradient(45deg, #000ED3 25%, transparent 25%),
+    linear-gradient(-45deg, #000ED3 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #000ED3 75%),
+    linear-gradient(-45deg, transparent 75%, #000ED3 75%);
+  background-size:20px 20px;
+  background-position:0 0, 0 10px, 10px -10px, -10px 0px;
+  opacity:.03;
+}
+::-webkit-scrollbar { display:none; }
+* { scrollbar-width:none; }
+
+@keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
 </style>
 </head>
 <body>
+<div class="bg-pattern"></div>
 
 <!-- HOME -->
 <div id="home" class="screen active">
   <div class="home-header">
-    <div class="greeting-label">Guten Morgen 👋</div>
-    <div class="greeting-name">Hey Artjom</div>
+    <div class="greeting-name">Hey Artjom 👋</div>
     <div class="greeting-sub">Was möchtest du heute kochen?</div>
   </div>
   <div class="search-wrap">
     <div class="search-box">
-      <svg class="search-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input class="search-input" type="text" placeholder="Rezept suchen…" id="searchInput">
+      <span class="wbo gray"></span>
+      <svg class="search-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" type="text" placeholder="Nach Rezept suchen…" id="searchInput">
     </div>
   </div>
   <div class="cat-bar" id="catBar">
-    <button class="cat-pill active" onclick="filterCat(this,'')">🍽 Alle</button>
-    <button class="cat-pill" onclick="filterCat(this,'Frühstück')">🌅 Frühstück</button>
-    <button class="cat-pill" onclick="filterCat(this,'Hauptgericht')">🍴 Hauptgericht</button>
-    <button class="cat-pill" onclick="filterCat(this,'Dessert')">🍰 Dessert</button>
-    <button class="cat-pill" onclick="filterCat(this,'Drinks')">🥤 Drinks</button>
+    <button class="cat-pill active" onclick="filterCat(this,'')"><span class="wbo"></span>Alle</button>
+    <button class="cat-pill" onclick="filterCat(this,'Frühstück')"><span class="wbo gray"></span>Frühstück</button>
+    <button class="cat-pill" onclick="filterCat(this,'Hauptgericht')"><span class="wbo gray"></span>Hauptgericht</button>
+    <button class="cat-pill" onclick="filterCat(this,'Dessert')"><span class="wbo gray"></span>Dessert</button>
+    <button class="cat-pill" onclick="filterCat(this,'Drinks')"><span class="wbo gray"></span>Drinks</button>
   </div>
-  <div class="section-head"><span class="section-title" id="sectionTitle">Alle Rezepte</span></div>
+  <div class="section-head" id="sectionHead" style="display:none"><span class="section-title" id="sectionTitle">Alle Rezepte</span></div>
   <div class="recipe-grid" id="recipeGrid"></div>
 </div>
 
 <!-- DETAIL -->
 <div id="detail" class="screen">
   <div class="detail-hero">
-    <div class="detail-hero-placeholder" id="detailEmoji">🍝</div>
+    <div class="detail-hero-emoji" id="detailEmoji">🍝</div>
     <button class="detail-back" onclick="showHome()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+      <span class="wbo"></span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
     </button>
     <button class="detail-edit-btn" onclick="openEdit()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <span class="wbo"></span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
     </button>
   </div>
   <div class="detail-body">
     <div class="detail-title" id="detailTitle">–</div>
     <div class="detail-meta" id="detailMeta"></div>
     <div class="portions-bar">
+      <span class="wbo"></span>
       <span class="portions-label">Portionen</span>
       <div class="portions-controls">
-        <button class="portions-btn" onclick="changePortions(-1)">−</button>
+        <button class="portions-btn" onclick="changePortions(-1)"><span class="wbo"></span>−</button>
         <span class="portions-value" id="portionsValue">2</span>
-        <button class="portions-btn" onclick="changePortions(+1)">+</button>
+        <button class="portions-btn" onclick="changePortions(+1)"><span class="wbo"></span>+</button>
       </div>
     </div>
     <div class="detail-tabs">
-      <div class="detail-tab active" onclick="switchTab(this,'tab-ingredients')">Zutaten</div>
+      <div class="detail-tab active" onclick="switchTab(this,'tab-ingredients')">Zutaten & Geräte</div>
       <div class="detail-tab" onclick="switchTab(this,'tab-steps')">Zubereitung</div>
     </div>
     <div id="tab-ingredients" class="tab-panel active">
       <ul class="ingredient-list" id="ingredientList"></ul>
-      <div id="equipmentPanel" style="margin-top:18px"></div>
+      <div id="equipmentPanel" style="margin-top:20px"></div>
       <button class="add-all-btn" onclick="addAllToCart()">
+        <span class="wbo"></span>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-        Alle Zutaten in den Warenkorb
+        Alle in den Warenkorb
       </button>
     </div>
     <div id="tab-steps" class="tab-panel"><div class="timeline" id="stepsTimeline"></div></div>
@@ -311,77 +433,66 @@
   <div id="cartContent"></div>
 </div>
 
-<!-- EDIT SCREEN -->
+<!-- EDIT -->
 <div id="edit" class="screen">
   <div class="editor-header">
-    <button class="editor-back" onclick="closeEdit()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
-    </button>
-    <div class="editor-title">Rezept bearbeiten</div>
-    <button class="editor-save-btn" onclick="saveEdit()">Speichern</button>
+    <button class="editor-back" onclick="closeEdit()"><span class="wbo gray"></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg></button>
+    <div class="editor-title">Bearbeiten</div>
+    <button class="editor-delete-btn" onclick="deleteRecipe()">🗑 Löschen</button>
+    <button class="editor-save-btn" onclick="saveEdit()"><span class="wbo"></span>Speichern</button>
   </div>
   <div class="editor-body" id="editBody"></div>
 </div>
 
-<!-- WIZARD SCREEN (add new recipe step by step) -->
+<!-- WIZARD -->
 <div id="wizard" class="screen">
   <div class="editor-header">
-    <button class="editor-back" onclick="closeWizard()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
-    </button>
+    <button class="editor-back" onclick="closeWizard()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg></button>
     <div class="editor-title" id="wizardTitle">Neues Rezept</div>
   </div>
   <div class="wizard-progress" id="wizardProgress"></div>
-
-  <!-- Step 1: Basics -->
   <div class="wizard-panel active" id="wp-0">
     <div class="form-section-title">Grundinfos</div>
-    <div class="form-group"><label class="form-label">Emoji / Icon</label><input class="form-input" id="w-emoji" placeholder="🍳" maxlength="4"></div>
-    <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="w-name" placeholder="z.B. Omas Gulasch"></div>
+    <div class="form-group"><label class="form-label">Emoji</label><div class="form-input-wrap"><span class="wbo gray"></span><input class="form-input" id="w-emoji" placeholder="🍳" maxlength="4"></div></div>
+    <div class="form-group"><label class="form-label">Name</label><div class="form-input-wrap"><span class="wbo gray"></span><input class="form-input" id="w-name" placeholder="z.B. Omas Gulasch"></div></div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Kochzeit</label><input class="form-input" id="w-time" placeholder="45 Min"></div>
-      <div class="form-group"><label class="form-label">Portionen</label><input class="form-input" type="number" id="w-servings" placeholder="2" min="1"></div>
+      <div class="form-group"><label class="form-label">Kochzeit</label><div class="form-input-wrap"><span class="wbo gray"></span><input class="form-input" id="w-time" placeholder="45 Min"></div></div>
+      <div class="form-group"><label class="form-label">Portionen</label><div class="form-input-wrap"><span class="wbo gray"></span><input class="form-input" type="number" id="w-servings" placeholder="2" min="1"></div></div>
     </div>
-    <div class="form-group"><label class="form-label">Kategorien (Komma)</label><input class="form-input" id="w-tag" placeholder="Frühstück, Lunch, Abendessen, Dessert, Drinks"></div>
+    <div class="form-group"><label class="form-label">Kategorien (Komma)</label><div class="form-input-wrap"><span class="wbo gray"></span><input class="form-input" id="w-tag" placeholder="Hauptgericht"></div></div>
   </div>
-
-  <!-- Step 2: Ingredients -->
   <div class="wizard-panel" id="wp-1">
     <div class="form-section-title">Zutaten</div>
     <div class="list-items" id="w-ing-list"></div>
     <button class="add-item-btn" onclick="addWizardIngredient()">+ Zutat hinzufügen</button>
   </div>
-
-  <!-- Step 3: Equipment -->
   <div class="wizard-panel" id="wp-2">
-    <div class="form-section-title">Benötigte Geräte</div>
+    <div class="form-section-title">Geräte</div>
     <div class="list-items" id="w-equip-list"></div>
     <button class="add-item-btn" onclick="addWizardEquipment()">+ Gerät hinzufügen</button>
   </div>
-
-  <!-- Step 4: Steps -->
   <div class="wizard-panel" id="wp-3">
     <div class="form-section-title">Zubereitung</div>
     <div class="list-items" id="w-steps-list"></div>
     <button class="add-item-btn" onclick="addWizardStep()">+ Schritt hinzufügen</button>
   </div>
-
   <div class="wizard-nav">
-    <button class="wizard-btn secondary" id="wizardPrevBtn" onclick="wizardPrev()" style="display:none">Zurück</button>
-    <button class="wizard-btn primary" id="wizardNextBtn" onclick="wizardNext()">Weiter →</button>
+    <button class="wizard-btn secondary" id="wizardPrevBtn" onclick="wizardPrev()" style="display:none"><span class="wbo gray"></span>Zurück</button>
+    <button class="wizard-btn primary" id="wizardNextBtn" onclick="wizardNext()"><span class="wbo"></span>Weiter →</button>
   </div>
 </div>
 
 <!-- BOTTOM NAV -->
 <div class="bottom-nav">
+  <div class="nav-wiggle-border"></div>
   <button class="nav-btn active" id="navHome" onclick="showHome()">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><mask id="m1" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect x="0.5" y="0.5" width="23" height="23" fill="currentColor" stroke="currentColor"/></mask><g mask="url(#m1)"><path d="M4.96724 12.142L5.19835 11.5883L4.96724 12.142ZM4.90055 2.84623L4.31835 2.99131L4.90055 2.84623ZM7.25504 2.44789L7.03876 3.00755V3.00755L7.25504 2.44789ZM8.98522 6.17841L8.38718 6.13001L8.98522 6.17841ZM9.12211 3.87441L9.72168 3.89713L9.12211 3.87441ZM10.6559 2.90036L10.0576 2.9455L10.6559 2.90036ZM10.7342 9.62739L10.1357 9.58467L10.7342 9.62739ZM16.164 13.936L15.5687 14.0103L16.164 13.936ZM13.7165 10.4308L14.255 10.1661L13.7165 10.4308ZM14.0866 3.92627L13.6514 3.51324L14.0866 3.92627ZM15.8254 2.40936L15.4747 1.9225L15.8254 2.40936ZM20.7069 7.79199L21.3063 7.81953L20.7069 7.79199ZM19.0663 11.8538L18.6749 11.399L19.0663 11.8538ZM18.0823 13.644L18.6799 13.6977L18.0823 13.644ZM17.9145 15.8183L17.3158 15.7787L17.9145 15.8183ZM17.8985 20.4263L17.3017 20.4885L17.8985 20.4263ZM5.88565 20.848L6.48272 20.7887C6.40833 20.0393 6.36915 19.29 6.36517 18.5408L5.76518 18.544L5.16519 18.5472C5.16937 19.334 5.21051 20.1207 5.28859 20.9073L5.88565 20.848ZM5.76518 18.544L6.36517 18.5408C6.36108 17.7713 6.3541 17.0018 6.34424 16.2323L5.74429 16.24L5.14434 16.2477C5.15416 17.0142 5.16111 17.7807 5.16519 18.5472L5.76518 18.544ZM5.74429 16.24L6.34424 16.2323C6.33474 15.4911 6.37454 14.713 6.46452 13.8978L5.86814 13.832L5.27176 13.7661C5.17691 14.6256 5.13415 15.4529 5.14434 16.2477L5.74429 16.24ZM5.86814 13.832L6.46452 13.8978C6.5198 13.3968 6.4643 12.9168 6.24168 12.4992C6.0153 12.0745 5.64907 11.7764 5.19835 11.5883L4.96724 12.142L4.73613 12.6957C4.97842 12.7969 5.10884 12.925 5.18276 13.0637C5.26044 13.2094 5.30889 13.4297 5.27176 13.7661L5.86814 13.832ZM4.96724 12.142L5.19835 11.5883C4.64399 11.3569 4.22735 10.9668 3.93789 10.3892L3.40148 10.6581L2.86507 10.9269C3.27728 11.7494 3.90448 12.3486 4.73613 12.6957L4.96724 12.142ZM3.40148 10.6581L3.93789 10.3892C3.64094 9.79669 3.53779 9.18044 3.62552 8.52476L3.03082 8.44519L2.43612 8.36561C2.3164 9.2603 2.46036 10.1193 2.86507 10.9269L3.40148 10.6581ZM3.03082 8.44519L3.62552 8.52476C3.73556 7.70239 3.74665 6.88242 3.65833 6.06589L3.06181 6.13041L2.46529 6.19493C2.54311 6.9144 2.53354 7.63761 2.43612 8.36561L3.03082 8.44519ZM3.06181 6.13041L3.65833 6.06589C3.58061 5.34725 3.59206 4.62889 3.69285 3.90968L3.09866 3.82641L2.50446 3.74314C2.39 4.55992 2.37689 5.37756 2.46529 6.19493L3.06181 6.13041ZM3.09866 3.82641L3.69285 3.90968C3.78683 3.23909 4.01484 2.89158 4.27831 2.71544L3.94485 2.21664L3.61139 1.71784C2.96186 2.15206 2.62574 2.87772 2.50446 3.74314L3.09866 3.82641ZM3.94485 2.21664L4.27831 2.71544C4.34419 2.6714 4.3608 2.67662 4.33459 2.67984C4.31916 2.68174 4.29491 2.68204 4.26588 2.67537C4.23665 2.66865 4.21277 2.65721 4.19607 2.6462C4.16596 2.62637 4.17731 2.62064 4.20995 2.68177C4.2418 2.74141 4.28066 2.84007 4.31835 2.99131L4.90055 2.84623L5.48274 2.70116C5.38626 2.31398 5.21665 1.88155 4.85622 1.64411C4.4088 1.34936 3.93699 1.50016 3.61139 1.71784L3.94485 2.21664ZM4.90055 2.84623L4.31835 2.99131C4.48276 3.65112 4.53747 4.33223 4.4807 5.03745L5.07876 5.08559L5.67683 5.13374C5.74371 4.30295 5.6796 3.49116 5.48274 2.70116L4.90055 2.84623ZM5.07876 5.08559L4.4807 5.03745C4.41388 5.86742 4.47951 6.65275 4.68622 7.38773L5.26381 7.22528L5.8414 7.06283C5.67773 6.48089 5.61999 5.83977 5.67683 5.13374L5.07876 5.08559ZM5.26381 7.22528L4.68622 7.38773C4.73661 7.5669 4.79828 7.74523 4.88047 7.88972C4.92115 7.96123 4.98526 8.05779 5.08318 8.14058C5.18737 8.22867 5.3602 8.32412 5.58451 8.30698C5.80001 8.29051 5.9496 8.17825 6.03259 8.09461C6.11521 8.01134 6.1708 7.91872 6.20803 7.84617C6.28307 7.69993 6.34083 7.52022 6.38903 7.33413L5.8082 7.18368L5.22737 7.03324C5.1867 7.19024 5.15513 7.26959 5.14037 7.29835C5.13269 7.31331 5.14327 7.28719 5.18076 7.2494C5.21861 7.21125 5.32295 7.12347 5.49309 7.11047C5.67203 7.09679 5.79938 7.1747 5.85797 7.22423C5.91029 7.26847 5.92869 7.30546 5.92353 7.2964C5.91406 7.27974 5.8836 7.21289 5.8414 7.06283L5.26381 7.22528ZM5.8082 7.18368L6.38903 7.33413C6.58665 6.57118 6.63588 5.77025 6.54338 4.93627L5.94703 5.00241L5.35069 5.06855C5.42855 5.77056 5.38522 6.42382 5.22737 7.03324L5.8082 7.18368ZM5.94703 5.00241L6.54338 4.93627C6.4658 4.23682 6.52765 3.66543 6.69906 3.20273L6.13643 2.99429L5.5738 2.78586C5.32233 3.46464 5.25791 4.23199 5.35069 5.06855L5.94703 5.00241ZM6.13643 2.99429L6.69906 3.20273C6.73626 3.10232 6.77246 3.04152 6.79928 3.00697C6.81225 2.99026 6.82224 2.98068 6.8283 2.97559C6.83415 2.97068 6.83734 2.96908 6.83801 2.96875C6.8386 2.96847 6.83979 2.9679 6.84292 2.96725C6.84629 2.96656 6.85432 2.9653 6.86849 2.96568C6.89805 2.96647 6.95309 2.97445 7.03876 3.00755L7.25504 2.44789L7.47131 1.88822C7.10957 1.74843 6.69802 1.70163 6.31132 1.89052C5.93338 2.07513 5.70834 2.4227 5.5738 2.78586L6.13643 2.99429ZM7.25504 2.44789L7.03876 3.00755C7.28004 3.10079 7.49469 3.32155 7.53905 3.95172L8.13757 3.90959L8.73609 3.86746C8.67233 2.96164 8.29862 2.20793 7.47131 1.88822L7.25504 2.44789ZM8.13757 3.90959L7.53905 3.95172C7.59039 4.68117 7.57143 5.41064 7.48203 6.14066L8.07758 6.21359L8.67313 6.28652C8.77183 5.48055 8.79286 4.67402 8.73609 3.86746L8.13757 3.90959ZM8.07758 6.21359L7.48203 6.14066C7.43278 6.54287 7.42334 6.93163 7.51601 7.24391C7.56458 7.40755 7.65434 7.59528 7.82529 7.74071C8.00818 7.89629 8.22729 7.95529 8.43634 7.94759L8.41426 7.348L8.39218 6.74841C8.44198 6.74657 8.52762 6.76271 8.60283 6.82669C8.6661 6.88051 8.67396 6.92791 8.66642 6.90248C8.65918 6.8781 8.64741 6.81798 8.64565 6.70698C8.64393 6.59888 8.6519 6.45996 8.67313 6.28652L8.07758 6.21359ZM8.41426 7.348L8.43634 7.94759C8.89541 7.93069 9.18299 7.62152 9.33506 7.31002C9.47928 7.01459 9.5501 6.63668 9.58327 6.2268L8.98522 6.17841L8.38718 6.13001C8.3582 6.48813 8.30279 6.68915 8.25669 6.78359C8.23589 6.82621 8.23055 6.8185 8.25737 6.79733C8.2919 6.77007 8.34226 6.75024 8.39218 6.74841L8.41426 7.348ZM8.98522 6.17841L9.58327 6.2268C9.6461 5.45028 9.69224 4.67372 9.72168 3.89713L9.12211 3.87441L8.52254 3.85168C8.49375 4.61109 8.44863 5.37053 8.38718 6.13001L8.98522 6.17841ZM9.12211 3.87441L9.72168 3.89713C9.74651 3.24202 9.94821 2.96695 10.1709 2.83999L9.87369 2.31876L9.57649 1.79754C8.85529 2.20876 8.55593 2.97079 8.52254 3.85168L9.12211 3.87441ZM9.87369 2.31876L10.1709 2.83999C10.2068 2.81952 10.2319 2.80852 10.2469 2.80302C10.2621 2.79748 10.2622 2.79929 10.2493 2.80061C10.2355 2.80203 10.2074 2.80275 10.1705 2.79354C10.1323 2.78403 10.0959 2.76665 10.0652 2.74384C10.0061 2.69993 10.0016 2.66217 10.0155 2.70016C10.029 2.73724 10.0477 2.81361 10.0576 2.9455L10.6559 2.90036L11.2542 2.85522C11.2394 2.65869 11.2069 2.46453 11.1428 2.28893C11.0791 2.11425 10.9706 1.92169 10.7812 1.78084C10.3508 1.46088 9.86795 1.63135 9.57649 1.79754L9.87369 2.31876ZM10.6559 2.90036L10.0576 2.9455C10.1063 3.59045 10.1396 4.29236 10.1574 5.05164L10.7572 5.0376L11.3571 5.02355C11.3389 4.24683 11.3047 3.52392 11.2542 2.85522L10.6559 2.90036ZM10.7572 5.0376L10.1574 5.05164C10.1753 5.81764 10.1894 6.58365 10.1997 7.34965L10.7997 7.3416L11.3996 7.33354C11.3893 6.56354 11.3751 5.79355 11.3571 5.02355L10.7572 5.0376ZM10.7997 7.3416L10.1997 7.34965C10.2098 8.10094 10.1885 8.84593 10.1357 9.58467L10.7342 9.62739L11.3327 9.6701C11.3879 8.89712 11.4102 8.11825 11.3996 7.33354L10.7997 7.3416ZM10.7342 9.62739L10.1357 9.58467C10.0911 10.2107 9.86446 10.7676 9.44249 11.2701L9.90198 11.6559L10.3615 12.0418C10.9413 11.3513 11.2695 10.5558 11.3327 9.6701L10.7342 9.62739ZM9.90198 11.6559L9.44249 11.2701C8.93701 11.8721 8.4973 12.4189 8.12423 12.91L8.60201 13.2729L9.07979 13.6359C9.43825 13.164 9.86519 12.6328 10.3615 12.0418L9.90198 11.6559ZM8.60201 13.2729L8.12423 12.91C7.64989 13.5344 7.47181 14.3128 7.52557 15.1841L8.12443 15.1472L8.72329 15.1102C8.68228 14.4456 8.82258 13.9745 9.07979 13.6359L8.60201 13.2729ZM8.12443 15.1472L7.52557 15.1841C7.56945 15.8954 7.51347 16.6076 7.35649 17.3225L7.94252 17.4512L8.52856 17.5799C8.70889 16.7587 8.77418 15.935 8.72329 15.1102L8.12443 15.1472ZM7.94252 17.4512L7.35649 17.3225C7.17791 18.1356 7.09648 18.9509 7.11309 19.7674L7.71296 19.7552L8.31284 19.743C8.2982 19.0234 8.36981 18.3027 8.52856 17.5799L7.94252 17.4512ZM7.71296 19.7552L7.11309 19.7674C7.12713 20.4578 6.98983 20.9223 6.77338 21.2271L7.2626 21.5745L7.75182 21.9218C8.16709 21.337 8.33003 20.5886 8.31284 19.743L7.71296 19.7552ZM7.2626 21.5745L6.77338 21.2271C6.63701 21.4192 6.53948 21.5052 6.48907 21.5369C6.46756 21.5504 6.46778 21.5457 6.48807 21.5419C6.51168 21.5376 6.54189 21.5385 6.57022 21.5472L6.39441 22.1209L6.21859 22.6945C6.55641 22.7981 6.87482 22.712 7.12825 22.5525C7.36724 22.4021 7.57233 22.1746 7.75182 21.9218L7.2626 21.5745ZM6.39441 22.1209L6.57022 21.5472C6.70025 21.5871 6.68825 21.6724 6.62716 21.5195C6.57276 21.3834 6.51853 21.1495 6.48272 20.7887L5.88565 20.848L5.28859 20.9073C5.329 21.3145 5.39768 21.6767 5.51287 21.9649C5.62136 22.2363 5.82562 22.5741 6.21859 22.6945L6.39441 22.1209ZM16.1166 20.848L16.7135 20.9084C16.7944 20.1085 16.811 19.3084 16.7632 18.5082L16.1643 18.544L15.5654 18.5798C15.6093 19.3156 15.5941 20.0515 15.5196 20.7876L16.1166 20.848ZM16.1643 18.544L16.7632 18.5082C16.7191 17.7706 16.7311 17.0329 16.7991 16.2951L16.2016 16.24L15.6042 16.1849C15.5306 16.9831 15.5177 17.7814 15.5654 18.5798L16.1643 18.544ZM16.2016 16.24L16.7991 16.2951C16.8738 15.4838 16.8606 14.6725 16.7594 13.8617L16.164 13.936L15.5687 14.0103C15.6591 14.7355 15.6709 15.4602 15.6042 16.1849L16.2016 16.24ZM16.164 13.936L16.7594 13.8617C16.6442 12.9386 16.2173 12.1853 15.4804 11.649L15.1273 12.1341L14.7742 12.6192C15.228 12.9494 15.4922 13.3974 15.5687 14.0103L16.164 13.936ZM15.1273 12.1341L15.4804 11.649C14.9688 11.2767 14.56 10.7866 14.255 10.1661L13.7165 10.4308L13.1781 10.6955C13.5635 11.4795 14.0952 12.125 14.7742 12.6192L15.1273 12.1341ZM13.7165 10.4308L14.255 10.1661C13.9508 9.54709 13.8062 8.90692 13.8167 8.23848L13.2167 8.2291L12.6168 8.21971C12.6033 9.0823 12.792 9.90992 13.1781 10.6955L13.7165 10.4308ZM13.2167 8.2291L13.8167 8.23848C13.8286 7.47491 13.8443 6.70763 13.8638 5.93664L13.264 5.92149L12.6642 5.90635C12.6446 6.68114 12.6288 7.45226 12.6168 8.21971L13.2167 8.2291ZM13.264 5.92149L13.8638 5.93664C13.8796 5.31113 14.0958 4.78812 14.5218 4.33931L14.0866 3.92627L13.6514 3.51324C13.0196 4.17894 12.6874 4.98607 12.6642 5.90635L13.264 5.92149ZM14.0866 3.92627L14.5218 4.33931C15.0245 3.80955 15.5758 3.32857 16.1761 2.89622L15.8254 2.40936L15.4747 1.9225C14.8143 2.39819 14.2063 2.92849 13.6514 3.51324L14.0866 3.92627ZM15.8254 2.40936L16.1761 2.89622C16.6397 2.56227 17.1233 2.49348 17.698 2.70098L17.9017 2.13665L18.1055 1.57231C17.1724 1.23539 16.2718 1.34841 15.4747 1.9225L15.8254 2.40936ZM17.9017 2.13665L17.698 2.70098C18.3568 2.93888 18.907 3.31552 19.358 3.83483L19.811 3.44143L20.2641 3.04803C19.677 2.37206 18.9544 1.87884 18.1055 1.57231L17.9017 2.13665ZM19.811 3.44143L19.358 3.83483C19.7931 4.3359 20.0286 4.90193 20.0754 5.55006L20.6738 5.50689L21.2723 5.46371C21.2066 4.55318 20.8669 3.74224 20.2641 3.04803L19.811 3.44143ZM20.6738 5.50689L20.0754 5.55006C20.13 6.307 20.1406 7.04506 20.1075 7.76446L20.7069 7.79199L21.3063 7.81953C21.3416 7.05077 21.3301 6.26543 21.2723 5.46371L20.6738 5.50689ZM20.7069 7.79199L20.1075 7.76446C20.0758 8.45452 19.9523 9.1373 19.7356 9.81404L20.3071 9.99695L20.8785 10.1799C21.1266 9.40481 21.2696 8.61762 21.3063 7.81953L20.7069 7.79199ZM20.3071 9.99695L19.7356 9.81404C19.5381 10.4312 19.1884 10.957 18.6749 11.399L19.0663 11.8538L19.4578 12.3085C20.1339 11.7265 20.6114 11.0145 20.8785 10.1799L20.3071 9.99695ZM19.0663 11.8538L18.6749 11.399C17.9806 11.9967 17.5619 12.7304 17.4847 13.5904L18.0823 13.644L18.6799 13.6977C18.7251 13.1946 18.9624 12.7349 19.4578 12.3085L19.0663 11.8538ZM18.0823 13.644L17.4847 13.5904C17.4231 14.2771 17.3668 15.0066 17.3158 15.7787L17.9145 15.8183L18.5132 15.8578C18.5636 15.0939 18.6192 14.3739 18.6799 13.6977L18.0823 13.644ZM17.9145 15.8183L17.3158 15.7787C17.2645 16.5547 17.2288 17.3307 17.2086 18.1067L17.8084 18.1223L18.4082 18.1379C18.428 17.3779 18.463 16.6178 18.5132 15.8578L17.9145 15.8183ZM17.8084 18.1223L17.2086 18.1067C17.1879 18.9008 17.219 19.6948 17.3017 20.4885L17.8985 20.4263L18.4953 20.3641C18.4179 19.6218 18.3889 18.8798 18.4082 18.1379L17.8084 18.1223ZM17.8985 20.4263L17.3017 20.4885C17.3336 20.7943 17.2862 20.9696 17.23 21.068C17.1802 21.1552 17.089 21.2437 16.8867 21.3079L17.0682 21.8798L17.2496 22.4517C17.6809 22.3149 18.045 22.0606 18.2719 21.6633C18.4925 21.2772 18.5434 20.8262 18.4953 20.3641L17.8985 20.4263ZM17.0682 21.8798L16.8867 21.3079C16.5749 21.4069 16.3557 21.4672 16.2179 21.496C16.1452 21.5112 16.1212 21.5119 16.1283 21.5117C16.1301 21.5117 16.1709 21.51 16.2301 21.5244C16.2769 21.5359 16.4452 21.5838 16.5622 21.7641L16.0589 22.0907L15.5556 22.4173C15.6824 22.6127 15.8698 22.6717 15.9449 22.6901C16.0325 22.7115 16.111 22.7126 16.1597 22.7113C16.2607 22.7087 16.3678 22.6906 16.4633 22.6707C16.662 22.6291 16.9278 22.5539 17.2496 22.4517L17.0682 21.8798ZM16.0589 22.0907L16.5622 21.7641C16.6016 21.8249 16.6193 21.8778 16.6261 21.9002C16.6341 21.9263 16.6376 21.9458 16.6389 21.9535C16.6413 21.9685 16.6406 21.9712 16.6399 21.9537C16.6385 21.9204 16.6387 21.8593 16.6432 21.7625C16.6521 21.5718 16.675 21.2891 16.7135 20.9084L16.1166 20.848L15.5196 20.7876C15.4804 21.1749 15.4549 21.4833 15.4445 21.7069C15.4394 21.8172 15.4373 21.919 15.4409 22.0043C15.4427 22.0462 15.4463 22.0971 15.4549 22.1493C15.4599 22.1796 15.4787 22.2989 15.5556 22.4173L16.0589 22.0907Z" fill="currentColor"/></g></svg>
     Rezepte
   </button>
   <button class="nav-btn" id="navCart" onclick="showCart()">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><mask id="m2" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="currentColor"/></mask><g mask="url(#m2)"><path d="M5.84123 19.8487L6.43348 19.9448C6.50919 19.4782 6.64011 19.3842 6.65871 19.3741C6.66583 19.3702 6.7924 19.3073 7.18683 19.5057L7.4564 18.9697L7.72597 18.4336C7.21277 18.1755 6.61632 18.0309 6.08505 18.3201C5.56526 18.603 5.34241 19.1768 5.24897 19.7526L5.84123 19.8487ZM7.4564 18.9697L7.18683 19.5057C7.57213 19.6995 7.62323 19.8491 7.63046 19.8897C7.63958 19.941 7.63494 20.1196 7.3355 20.4718L7.79266 20.8604L8.24983 21.249C8.63385 20.7972 8.91489 20.2586 8.81192 19.6796C8.70706 19.09 8.2483 18.6963 7.72597 18.4336L7.4564 18.9697ZM7.79266 20.8604L7.3355 20.4718C7.01215 20.8523 6.76329 21.0616 6.58945 21.1563C6.42795 21.2442 6.42353 21.1899 6.46836 21.2147L6.17749 21.7395L5.88661 22.2643C6.32477 22.5072 6.78622 22.4154 7.1631 22.2103C7.52765 22.0119 7.88972 21.6727 8.24983 21.249L7.79266 20.8604ZM6.17749 21.7395L6.46836 21.2147C6.46822 21.2147 6.46779 21.2145 6.46616 21.2129C6.46429 21.211 6.45867 21.205 6.45067 21.1916C6.43377 21.1632 6.40807 21.1046 6.38916 20.9983C6.35013 20.7788 6.35364 20.4369 6.43348 19.9448L5.84123 19.8487L5.24897 19.7526C5.15966 20.3031 5.13464 20.7975 5.2077 21.2084C5.2814 21.6228 5.47325 22.0352 5.88661 22.2643L6.17749 21.7395ZM15.7899 19.7538L16.3855 19.8265C16.4461 19.3297 16.5833 19.2402 16.5992 19.2319C16.6208 19.2207 16.784 19.1618 17.2446 19.3921L17.5129 18.8555L17.7813 18.3188C17.2281 18.0422 16.5972 17.8797 16.0445 18.1679C15.486 18.459 15.2686 19.0721 15.1943 19.6811L15.7899 19.7538ZM17.5129 18.8555L17.2446 19.3921C17.6958 19.6178 17.7705 19.7935 17.7811 19.8478C17.7907 19.8971 17.7913 20.0785 17.4588 20.4393L17.9 20.8459L18.3413 21.2525C18.7645 20.7932 19.0784 20.2329 18.959 19.6187C18.8405 19.0096 18.3438 18.6001 17.7813 18.3188L17.5129 18.8555ZM17.9 20.8459L17.4588 20.4393C17.0991 20.8296 16.822 21.0509 16.6251 21.1535C16.4329 21.2537 16.4213 21.1932 16.4713 21.2213L16.177 21.7442L15.8828 22.2671C16.3258 22.5164 16.7978 22.4168 17.1799 22.2176C17.5574 22.0207 17.9453 21.6822 18.3413 21.2525L17.9 20.8459ZM16.177 21.7442L16.4713 21.2213C16.4917 21.2328 16.4224 21.2126 16.3744 20.9662C16.3272 20.7231 16.3214 20.3519 16.3855 19.8265L15.7899 19.7538L15.1943 19.6811C15.1235 20.2615 15.1148 20.7749 15.1965 21.1953C15.2776 21.6124 15.4693 22.0345 15.8828 22.2671L16.177 21.7442ZM6.88057 7.72581L6.32803 7.95971C6.86139 9.21966 7.67621 10.1515 8.78771 10.6955L9.05148 10.1566L9.31525 9.6177C8.50629 9.22175 7.87383 8.53305 7.4331 7.49192L6.88057 7.72581ZM9.05148 10.1566L8.78771 10.6955C9.83052 11.2059 11.0146 11.4931 12.3289 11.5699L12.3638 10.9709L12.3988 10.3719C11.217 10.3029 10.1929 10.0473 9.31525 9.6177L9.05148 10.1566ZM12.3638 10.9709L12.3289 11.5699C13.7184 11.651 14.9065 11.2636 15.8256 10.3648L15.4062 9.93583L14.9867 9.50683C14.3454 10.1339 13.5052 10.4365 12.3988 10.3719L12.3638 10.9709ZM15.4062 9.93583L15.8256 10.3648C16.6551 9.55382 17.2994 8.64974 17.7511 7.65267L17.2045 7.4051L16.658 7.15752C16.2723 8.00897 15.7177 8.79204 14.9867 9.50683L15.4062 9.93583ZM17.2045 7.4051L17.7511 7.65267C17.9869 7.13201 18.1133 6.47009 17.6465 5.9691C17.4372 5.74446 17.1609 5.62007 16.8842 5.55168C16.606 5.48292 16.2878 5.46073 15.9441 5.47013L15.9605 6.0699L15.9769 6.66968C16.2572 6.66201 16.4589 6.68266 16.5963 6.71663C16.7353 6.75098 16.7705 6.78922 16.7685 6.78711C16.755 6.77261 16.7624 6.76055 16.7623 6.79999C16.7621 6.85563 16.7431 6.96969 16.658 7.15752L17.2045 7.4051ZM15.9605 6.0699L15.9441 5.47013C14.6996 5.50416 13.455 5.52751 12.2104 5.54016L12.2165 6.14013L12.2226 6.7401C13.4741 6.72737 14.7255 6.7039 15.9769 6.66968L15.9605 6.0699ZM12.2165 6.14013L12.2104 5.54016C10.9741 5.55273 9.73783 5.52913 8.5015 5.46937L8.47253 6.06867L8.44356 6.66797C9.70323 6.72886 10.9629 6.7529 12.2226 6.7401L12.2165 6.14013ZM8.47253 6.06867L8.5015 5.46937C7.27647 5.41015 6.53419 5.38069 6.34624 5.38979L6.37526 5.98909L6.40429 6.58839C6.40411 6.5884 6.40517 6.58834 6.40773 6.58827C6.41023 6.5882 6.41369 6.58813 6.41821 6.58806C6.42737 6.58794 6.43945 6.58788 6.45485 6.58794C6.48577 6.58807 6.52628 6.58866 6.57722 6.58982C6.67902 6.59213 6.81607 6.59652 6.98946 6.6031C7.33593 6.61624 7.8203 6.63784 8.44356 6.66797L8.47253 6.06867ZM6.37526 5.98909L6.34624 5.38979C6.23493 5.39518 6.11297 5.42981 6.00237 5.50872C5.89479 5.58547 5.82923 5.6817 5.79078 5.76358C5.72185 5.91037 5.72051 6.05138 5.72266 6.12041C5.72742 6.27328 5.76819 6.44287 5.81285 6.59635C5.90741 6.92135 6.08288 7.38059 6.32803 7.95971L6.88057 7.72581L7.4331 7.49192C7.19121 6.9205 7.03894 6.51501 6.96507 6.26111C6.92551 6.12513 6.92188 6.07672 6.92208 6.08305C6.92226 6.08875 6.9226 6.10775 6.91872 6.13579C6.91504 6.16236 6.90542 6.21309 6.87698 6.27364C6.84735 6.33675 6.79309 6.41868 6.69931 6.48559C6.60251 6.55465 6.49683 6.5839 6.40429 6.58839L6.37526 5.98909ZM7.072 3.931L7.0941 4.53059C8.33098 4.485 9.56784 4.47386 10.8047 4.49715L10.816 3.89726L10.8273 3.29736C9.56816 3.27365 8.30902 3.285 7.0499 3.33141L7.072 3.931ZM10.816 3.89726L10.8047 4.49715C12.053 4.52066 13.3013 4.54322 14.5496 4.56483L14.56 3.96492L14.5704 3.36501C13.3227 3.34341 12.075 3.32086 10.8273 3.29736L10.816 3.89726ZM14.56 3.96492L14.5496 4.56483C15.8116 4.58667 17.0806 4.56463 18.3566 4.49875L18.3256 3.89955L18.2947 3.30035C17.0459 3.36482 15.8044 3.38637 14.5704 3.36501L14.56 3.96492ZM18.3256 3.89955L18.3566 4.49875C18.93 4.46914 19.1864 4.58212 19.2892 4.67523C19.3649 4.74374 19.467 4.90365 19.4088 5.3393L20.0036 5.41865L20.5983 5.49799C20.684 4.85573 20.5783 4.2235 20.0946 3.78565C19.6382 3.37239 18.9837 3.26477 18.2947 3.30035L18.3256 3.89955ZM20.0036 5.41865L19.4088 5.3393C19.2749 6.34339 18.9482 7.37939 18.4188 8.44898L18.9566 8.71512L19.4943 8.98127C20.0733 7.81139 20.4446 6.64973 20.5983 5.49799L20.0036 5.41865ZM18.9566 8.71512L18.4188 8.44898C17.8913 9.51493 17.247 10.4193 16.489 11.1688L16.9108 11.5955L17.3326 12.0221C18.1939 11.1706 18.9135 10.1548 19.4943 8.98127L18.9566 8.71512ZM16.9108 11.5955L16.489 11.1688C15.8012 11.8487 14.9297 12.2019 13.8274 12.2101L13.8319 12.8101L13.8363 13.41C15.22 13.3998 16.4011 12.9432 17.3326 12.0221L16.9108 11.5955ZM13.8319 12.8101L13.8274 12.2101C12.5763 12.2194 11.3226 12.2544 10.0665 12.3152L10.0955 12.9145L10.1245 13.5138C11.3643 13.4538 12.6016 13.4192 13.8363 13.41L13.8319 12.8101ZM10.0955 12.9145L10.0665 12.3152C9.41197 12.3468 8.83496 12.4541 8.409 12.6965C8.18745 12.8226 7.98963 12.9951 7.85429 13.2273C7.71684 13.4631 7.66598 13.7228 7.68183 13.9837L8.28073 13.9473L8.87962 13.9109C8.87639 13.8577 8.88683 13.8388 8.89107 13.8315C8.89742 13.8206 8.92167 13.7855 9.00257 13.7394C9.18153 13.6376 9.53098 13.5425 10.1245 13.5138L10.0955 12.9145ZM8.28073 13.9473L7.68183 13.9837C7.71565 14.5403 8.03572 14.9527 8.50248 15.2095C8.9376 15.4488 9.51351 15.5655 10.1719 15.6074L10.21 15.0086L10.248 14.4098C9.65846 14.3723 9.28883 14.2725 9.08086 14.1581C8.90454 14.0611 8.88398 13.9825 8.87962 13.9109L8.28073 13.9473ZM10.21 15.0086L10.1719 15.6074C11.452 15.6887 12.7321 15.6673 14.0119 15.5431L13.954 14.946L13.896 14.3488C12.6799 14.4667 11.464 14.4871 10.248 14.4098L10.21 15.0086ZM13.954 14.946L14.0119 15.5431C15.2016 15.4277 16.2741 15.4997 17.236 15.7481L17.386 15.1672L17.536 14.5862C16.4179 14.2975 15.2023 14.222 13.896 14.3488L13.954 14.946ZM17.386 15.1672L17.236 15.7481C17.4763 15.8101 17.6332 15.8684 17.7259 15.9155C17.7714 15.9386 17.787 15.9519 17.7858 15.9509C17.7851 15.9502 17.7504 15.9207 17.7224 15.8556C17.6904 15.7813 17.6817 15.6937 17.7007 15.6114C17.7176 15.5385 17.749 15.5002 17.7522 15.4963C17.7555 15.4923 17.7447 15.5059 17.7054 15.5343C17.6674 15.5617 17.6123 15.5961 17.5357 15.6365L17.816 16.167L18.0963 16.6975C18.3079 16.5858 18.5224 16.4464 18.6737 16.265C18.8416 16.0636 18.9785 15.7389 18.8247 15.3815C18.7032 15.099 18.4512 14.9381 18.2699 14.8459C18.0668 14.7426 17.8158 14.6585 17.536 14.5862L17.386 15.1672ZM17.816 16.167L17.5357 15.6365C16.8763 15.985 15.9604 16.2308 14.7568 16.346L14.814 16.9433L14.8712 17.5406C16.1637 17.4168 17.2491 17.1452 18.0963 16.6975L17.816 16.167ZM14.814 16.9433L14.7568 16.346C13.5462 16.4619 12.3358 16.464 11.1252 16.3522L11.07 16.9496L11.0148 17.5471C12.3002 17.6658 13.5858 17.6636 14.8712 17.5406L14.814 16.9433ZM11.07 16.9496L11.1252 16.3522C9.87377 16.2366 8.63585 16.1331 7.41145 16.0417L7.36678 16.6401L7.32212 17.2384C8.53936 17.3293 9.77026 17.4322 11.0148 17.5471L11.07 16.9496ZM7.36678 16.6401L7.41145 16.0417C6.87932 16.002 6.62069 15.8573 6.49767 15.718C6.38347 15.5887 6.28918 15.3533 6.34895 14.8908L5.7539 14.8139L5.15885 14.737C5.07306 15.4008 5.1748 16.0329 5.59823 16.5124C6.01283 16.9818 6.63343 17.187 7.32212 17.2384L7.36678 16.6401ZM5.7539 14.8139L6.34895 14.8908C6.50127 13.7121 6.49695 12.539 6.33553 11.3729L5.7412 11.4551L5.14686 11.5374C5.29351 12.5968 5.29766 13.6629 5.15885 14.737L5.7539 14.8139ZM5.7412 11.4551L6.33553 11.3729C6.17511 10.2139 5.87333 9.02726 5.43339 7.81363L4.86931 8.01811L4.30522 8.22259C4.71974 9.36607 4.99922 10.4708 5.14686 11.5374L5.7412 11.4551ZM4.86931 8.01811L5.43339 7.81363C4.97973 6.56216 4.32081 5.48423 3.45237 4.59025L3.022 5.00833L2.59164 5.4264C3.33181 6.18834 3.90442 7.11693 4.30522 8.22259L4.86931 8.01811ZM3.022 5.00833L3.45237 4.59025C3.0716 4.19828 2.81274 3.86142 2.65555 3.57898C2.49715 3.29435 2.46243 3.10215 2.4706 2.98288L1.872 2.94189L1.2734 2.9009C1.24393 3.3313 1.38206 3.75834 1.60699 4.16252C1.83314 4.56888 2.1681 4.99041 2.59164 5.4264L3.022 5.00833ZM1.872 2.94189L2.4706 2.98288C2.47414 2.93123 2.48356 2.96066 2.44224 3.00888C2.39604 3.0628 2.34888 3.06818 2.36455 3.06579C2.38992 3.06192 2.46365 3.05914 2.60515 3.09036C2.74266 3.1207 2.91889 3.17742 3.13781 3.26816L3.36755 2.71388L3.59729 2.15961C3.10296 1.95472 2.60655 1.81503 2.18369 1.8795C1.9501 1.91511 1.71129 2.0177 1.53105 2.22803C1.35569 2.43267 1.28868 2.67773 1.2734 2.9009L1.872 2.94189ZM3.36755 2.71388L3.13781 3.26816C3.60684 3.46256 3.95625 3.62908 4.19679 3.7675C4.31706 3.83671 4.39914 3.89267 4.45145 3.93471C4.51001 3.98178 4.50297 3.98898 4.48214 3.95246L5.00332 3.65518L5.5245 3.35791C5.43811 3.20645 5.31375 3.08823 5.20322 2.99939C5.08643 2.90551 4.94766 2.81508 4.7953 2.72741C4.49058 2.55206 4.08767 2.36286 3.59729 2.15961L3.36755 2.71388ZM5.00332 3.65518L4.48214 3.95246C4.61514 4.18563 4.83513 4.30063 4.98733 4.36032C5.15297 4.42527 5.34341 4.46513 5.53954 4.49128C5.9344 4.54393 6.45835 4.55403 7.0941 4.53059L7.072 3.931L7.0499 3.33141C6.43765 3.35397 5.99282 3.3411 5.69813 3.30181C5.54947 3.28199 5.46494 3.25864 5.42541 3.24314C5.37244 3.22237 5.45707 3.23968 5.5245 3.35791L5.00332 3.65518Z" fill="currentColor"/></g></svg>
     <div class="cart-badge" id="cartBadge">0</div>
-    Warenkorb
+    Einkaufen
   </button>
 </div>
 
@@ -389,12 +500,12 @@
 <div class="fab-overlay" id="fabOverlay" onclick="closeFab()"></div>
 <div class="fab-menu" id="fabMenu">
   <div class="fab-menu-item" onclick="openImportModal()">
-    <span class="fab-menu-label">Rezept importieren</span>
-    <div class="fab-menu-btn">🔗</div>
+    <span class="fab-menu-label"><span class="wbo gray"></span>Text importieren</span>
+    <div class="fab-menu-icon"><span class="wbo gray"></span>📋</div>
   </div>
   <div class="fab-menu-item" onclick="openWizard()">
-    <span class="fab-menu-label">Eigenes Rezept hinzufügen</span>
-    <div class="fab-menu-btn">✏️</div>
+    <span class="fab-menu-label"><span class="wbo gray"></span>Rezept hinzufügen</span>
+    <div class="fab-menu-icon"><span class="wbo gray"></span>✏️</div>
   </div>
 </div>
 <button class="fab" id="fab" onclick="toggleFab()">
@@ -405,235 +516,230 @@
 <div class="modal-overlay" id="importModal">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div class="modal-title">Rezept importieren</div>
-    <div class="form-group">
-      <label class="form-label">Rezept-URL</label>
-      <input class="form-input" type="url" id="importUrl" placeholder="https://chefkoch.de/...">
-    </div>
-    <div id="importStatus" style="display:none;font-size:13px;color:var(--text-secondary);padding:10px 0;text-align:center;"></div>
-    <button class="btn-primary" id="importBtn" onclick="doImport()">Importieren</button>
+    <div class="modal-title">Rezept einfügen</div>
+    <p style="font-size:13px;color:var(--ink-mid);margin-bottom:14px;line-height:1.5">Rezepttext kopieren und hier einfügen. Die KI strukturiert alles automatisch.</p>
+    <div class="form-group"><label class="form-label">Rezepttext</label><textarea class="form-textarea" id="importText" style="min-height:140px" placeholder="Zutaten, Schritte, alles hier reinkopieren…"></textarea></div>
+    <div id="importStatus" style="display:none;font-size:13px;color:var(--ink-mid);padding:8px 0;text-align:center"></div>
+    <button class="btn-primary" id="importBtn" onclick="doImport()">Analysieren ✨</button>
   </div>
 </div>
 
 <script>
 // ══ DATA ══
-let recipes = [
-  {
-    id:1, emoji:'🍝', title:'Spaghetti Carbonara',
-    time:'25 Min', servings:2, tags:['Hauptgericht'],
-    equipment:[{icon:'🍳',name:'Große Pfanne'},{icon:'🫕',name:'Großer Kochtopf'},{icon:'🧀',name:'Reibe'}],
-    ingredients:[
-      {name:'Spaghetti',unit:'g',base:200},
-      {name:'Speck (Pancetta)',unit:'g',base:100},
-      {name:'Eier',unit:'Stück',base:3},
-      {name:'Pecorino Romano',unit:'g',base:60},
-      {name:'Schwarzer Pfeffer',unit:null,base:null},
-      {name:'Salz',unit:'TL',base:1},
-    ],
-    steps:[
-      {text:'Einen großen Topf Salzwasser zum Kochen bringen. Spaghetti al dente kochen.',tip:'Das Wasser sollte ordentlich salzig schmecken – wie das Meer!',timer:null,type:'cook',ingRefs:['Spaghetti','Salz']},
-      {text:'Speck in Würfel schneiden und in einer Pfanne ohne Öl knusprig ausbraten.',tip:null,timer:null,type:'cook',ingRefs:['Speck (Pancetta)']},
-      {text:'Eier mit geriebenem Pecorino und schwarzem Pfeffer verquirlen.',tip:'Kein Sahne! Echte Carbonara kommt ohne aus.',timer:null,type:'cook',ingRefs:['Eier','Pecorino Romano','Schwarzer Pfeffer']},
-      {text:'Pasta abgießen, Kochwasser auffangen. Nudeln zur Pfanne mit Speck geben.',tip:null,timer:null,type:'cook',ingRefs:[]},
-      {text:'Vom Herd nehmen, Eier-Käse-Masse unterheben. Kochwasser schluckweise zugeben bis cremig.',tip:'Nie bei direkter Hitze rühren – sonst gibt es Rührei.',timer:null,type:'cook',ingRefs:[]},
-    ]
-  },
-  {
-    id:2, emoji:'🍜', title:'Miso Ramen',
-    time:'45 Min', servings:2, tags:['Hauptgericht'],
-    equipment:[{icon:'🫕',name:'Großer Topf'},{icon:'🥄',name:'Kleiner Topf'},{icon:'🔪',name:'Kochmesser'}],
-    ingredients:[
-      {name:'Ramen-Nudeln',unit:'g',base:180},
-      {name:'Miso-Paste',unit:'EL',base:3},
-      {name:'Hühnerbrühe',unit:'ml',base:800},
-      {name:'Pak Choi',unit:'Stück',base:2},
-      {name:'Eier',unit:'Stück',base:2},
-      {name:'Frühlingszwiebeln',unit:'Stiel',base:2},
-      {name:'Sesam',unit:'EL',base:1},
-    ],
-    steps:[
-      {text:'Hühnerbrühe erhitzen. Knoblauch und Ingwer hacken und andünsten.',tip:null,timer:null,type:'cook',ingRefs:['Hühnerbrühe']},
-      {text:'Miso-Paste mit Brühe glatt rühren, zur Suppe geben. 10 Minuten ziehen lassen.',tip:'Nie aufkochen – Miso verliert sonst sein Aroma.',timer:600,type:'wait',ingRefs:['Miso-Paste']},
-      {text:'Ramen-Nudeln in separatem Salzwasser kochen.',tip:null,timer:null,type:'cook',ingRefs:['Ramen-Nudeln']},
-      {text:'Pak Choi halbieren und 2 Minuten in der Suppe blanchieren.',tip:null,timer:120,type:'cook',ingRefs:['Pak Choi']},
-      {text:'Nudeln in tiefe Schalen geben, Brühe aufgießen. Mit Ei, Frühlingszwiebeln und Sesam garnieren.',tip:'Je mehr Toppings, desto besser!',timer:null,type:'cook',ingRefs:['Eier','Frühlingszwiebeln','Sesam']},
-    ]
-  },
-  {
-    id:3, emoji:'🍕', title:'Neapolitanische Pizza',
-    time:'90 Min', servings:2, tags:['Hauptgericht'],
-    equipment:[{icon:'🔥',name:'Backofen (250 °C+)'},{icon:'🪨',name:'Pizzastein (empfohlen)'},{icon:'🫙',name:'Große Rührschüssel'}],
-    ingredients:[
-      {name:'Mehl (Tipo 00)',unit:'g',base:300},
-      {name:'Hefe (frisch)',unit:'g',base:5},
-      {name:'Wasser (lauwarm)',unit:'ml',base:200},
-      {name:'Salz',unit:'TL',base:1},
-      {name:'San Marzano Tomaten',unit:'g',base:200},
-      {name:'Mozzarella',unit:'g',base:150},
-      {name:'Basilikum',unit:null,base:null},
-    ],
-    steps:[
-      {text:'Hefe in Wasser auflösen. Mehl und Salz mischen, Hefewasser zugeben und 10 Minuten kneten.',tip:null,timer:600,type:'cook',ingRefs:['Mehl (Tipo 00)','Hefe (frisch)','Wasser (lauwarm)','Salz']},
-      {text:'Teig abdecken und 60 Minuten bei Raumtemperatur gehen lassen.',tip:'Länger ist besser – gerne über Nacht im Kühlschrank.',timer:3600,type:'wait',ingRefs:[]},
-      {text:'Ofen auf 250 °C+ vorheizen, Pizzastein mit aufheizen.',tip:null,timer:null,type:'cook',ingRefs:[]},
-      {text:'Teig dünn ausziehen (nicht rollen!). Mit Tomaten bestreichen, Mozzarella verteilen.',tip:'Ränder frei lassen für den perfekten Cornicione.',timer:null,type:'cook',ingRefs:['San Marzano Tomaten','Mozzarella']},
-      {text:'Pizza 8–10 Minuten backen bis die Ränder gebräunt sind und der Käse blubbert.',tip:null,timer:540,type:'cook',ingRefs:['Basilikum']},
-    ]
-  },
-  {
-    id:4, emoji:'🥘', title:'Hähnchen Tikka Masala',
-    time:'50 Min', servings:4, tags:['Hauptgericht'],
-    equipment:[{icon:'🍳',name:'Große Pfanne / Wok'},{icon:'🫕',name:'Topf (für Reis)'},{icon:'🔪',name:'Kochmesser'},{icon:'🥣',name:'Schüssel (Marinieren)'}],
-    ingredients:[
-      {name:'Hähnchenbrust',unit:'g',base:500},
-      {name:'Tomaten (passiert)',unit:'g',base:400},
-      {name:'Sahne',unit:'ml',base:150},
-      {name:'Zwiebel',unit:'Stück',base:2},
-      {name:'Knoblauch',unit:'Zehen',base:4},
-      {name:'Tikka Masala Gewürz',unit:'EL',base:2},
-      {name:'Joghurt',unit:'g',base:100},
-      {name:'Basmati-Reis',unit:'g',base:300},
-    ],
-    steps:[
-      {text:'Hähnchen würfeln. Mit Joghurt und der Hälfte der Gewürze vermengen und 30 Minuten marinieren.',tip:'Je länger mariniert, desto zarter.',timer:1800,type:'wait',ingRefs:['Hähnchenbrust','Joghurt','Tikka Masala Gewürz']},
-      {text:'Hähnchen in heißer Pfanne scharf anbraten. Herausnehmen und beiseite stellen.',tip:null,timer:null,type:'cook',ingRefs:['Hähnchenbrust']},
-      {text:'Zwiebeln und Knoblauch glasig dünsten. Restliche Gewürze 1 Minute rösten.',tip:null,timer:60,type:'cook',ingRefs:['Zwiebel','Knoblauch','Tikka Masala Gewürz']},
-      {text:'Passierte Tomaten zugießen und 15 Minuten köcheln lassen.',tip:null,timer:900,type:'wait',ingRefs:['Tomaten (passiert)']},
-      {text:'Hähnchen zurückgeben, Sahne einrühren und 10 Minuten ziehen lassen. Mit Reis servieren.',tip:'Mit frischem Koriander und Zitrone garnieren.',timer:600,type:'wait',ingRefs:['Sahne','Basmati-Reis']},
-    ]
-  },
+let recipes=[
+  {id:1,emoji:'🍝',title:'Spaghetti Carbonara',time:'25 Min',servings:2,tags:['Hauptgericht'],
+   equipment:[{icon:'🍳',name:'Große Pfanne'},{icon:'🫕',name:'Kochtopf'},{icon:'🧀',name:'Reibe'}],
+   ingredients:[{name:'Spaghetti',unit:'g',base:200},{name:'Pancetta',unit:'g',base:100},{name:'Eier',unit:'Stück',base:3},{name:'Pecorino Romano',unit:'g',base:60},{name:'Schwarzer Pfeffer',unit:null,base:null},{name:'Salz',unit:'TL',base:1}],
+   steps:[
+    {text:'Salzwasser zum Kochen bringen, Spaghetti al dente kochen.',tip:'Wasser wie das Meer salzen!',timer:null,type:'cook',ingRefs:['Spaghetti','Salz']},
+    {text:'Pancetta würfeln und in der Pfanne ohne Öl knusprig ausbraten.',tip:null,timer:null,type:'cook',ingRefs:['Pancetta']},
+    {text:'Eier mit Pecorino und Pfeffer verquirlen.',tip:'Kein Sahne – echte Carbonara!',timer:null,type:'cook',ingRefs:['Eier','Pecorino Romano','Schwarzer Pfeffer']},
+    {text:'Pasta abgießen, Kochwasser auffangen. Nudeln zum Speck geben.',tip:null,timer:null,type:'cook',ingRefs:[]},
+    {text:'Vom Herd nehmen, Ei-Käse-Masse unterheben. Kochwasser schluckweise zugeben bis cremig.',tip:'Nie bei direkter Hitze rühren.',timer:null,type:'cook',ingRefs:[]},
+   ]},
+  {id:2,emoji:'🍜',title:'Miso Ramen',time:'45 Min',servings:2,tags:['Hauptgericht'],
+   equipment:[{icon:'🫕',name:'Großer Topf'},{icon:'🥄',name:'Kleiner Topf'},{icon:'🔪',name:'Kochmesser'}],
+   ingredients:[{name:'Ramen-Nudeln',unit:'g',base:180},{name:'Miso-Paste',unit:'EL',base:3},{name:'Hühnerbrühe',unit:'ml',base:800},{name:'Pak Choi',unit:'Stück',base:2},{name:'Eier',unit:'Stück',base:2},{name:'Frühlingszwiebeln',unit:'Stiel',base:2},{name:'Sesam',unit:'EL',base:1}],
+   steps:[
+    {text:'Hühnerbrühe erhitzen. Knoblauch und Ingwer hacken und andünsten.',tip:null,timer:null,type:'cook',ingRefs:['Hühnerbrühe']},
+    {text:'Miso-Paste mit Brühe glatt rühren, zur Suppe geben. 10 Min ziehen lassen.',tip:'Nie aufkochen – Miso verliert sein Aroma.',timer:600,type:'wait',ingRefs:['Miso-Paste']},
+    {text:'Ramen-Nudeln in separatem Salzwasser kochen.',tip:null,timer:null,type:'cook',ingRefs:['Ramen-Nudeln']},
+    {text:'Pak Choi halbieren und 2 Min in der Suppe blanchieren.',tip:null,timer:120,type:'cook',ingRefs:['Pak Choi']},
+    {text:'Nudeln in tiefe Schalen, Brühe aufgießen. Mit Ei, Frühlingszwiebeln und Sesam garnieren.',tip:null,timer:null,type:'cook',ingRefs:['Eier','Frühlingszwiebeln','Sesam']},
+   ]},
+  {id:3,emoji:'🍕',title:'Neapolitanische Pizza',time:'90 Min',servings:2,tags:['Hauptgericht'],
+   equipment:[{icon:'🔥',name:'Backofen 250°C+'},{icon:'🪨',name:'Pizzastein'},{icon:'🫙',name:'Rührschüssel'}],
+   ingredients:[{name:'Mehl Tipo 00',unit:'g',base:300},{name:'Hefe frisch',unit:'g',base:5},{name:'Wasser lauwarm',unit:'ml',base:200},{name:'Salz',unit:'TL',base:1},{name:'San Marzano Tomaten',unit:'g',base:200},{name:'Mozzarella',unit:'g',base:150},{name:'Basilikum',unit:null,base:null}],
+   steps:[
+    {text:'Hefe in Wasser auflösen. Mehl+Salz mischen, Hefewasser zugeben und 10 Min kneten.',tip:null,timer:600,type:'cook',ingRefs:['Mehl Tipo 00','Hefe frisch','Wasser lauwarm','Salz']},
+    {text:'Teig abdecken und 60 Min gehen lassen.',tip:'Gerne über Nacht im Kühlschrank.',timer:3600,type:'wait',ingRefs:[]},
+    {text:'Ofen auf 250°C+ vorheizen, Pizzastein mit aufheizen.',tip:null,timer:null,type:'cook',ingRefs:[]},
+    {text:'Teig dünn ausziehen. Mit Tomaten bestreichen, Mozzarella verteilen.',tip:'Ränder frei lassen!',timer:null,type:'cook',ingRefs:['San Marzano Tomaten','Mozzarella']},
+    {text:'Pizza 8–10 Min backen bis Ränder gebräunt sind.',tip:null,timer:540,type:'cook',ingRefs:['Basilikum']},
+   ]},
+  {id:4,emoji:'🥘',title:'Hähnchen Tikka Masala',time:'50 Min',servings:4,tags:['Hauptgericht'],
+   equipment:[{icon:'🍳',name:'Große Pfanne'},{icon:'🫕',name:'Topf für Reis'},{icon:'🔪',name:'Kochmesser'},{icon:'🥣',name:'Schüssel'}],
+   ingredients:[{name:'Hähnchenbrust',unit:'g',base:500},{name:'Tomaten passiert',unit:'g',base:400},{name:'Sahne',unit:'ml',base:150},{name:'Zwiebel',unit:'Stück',base:2},{name:'Knoblauch',unit:'Zehen',base:4},{name:'Tikka Masala Gewürz',unit:'EL',base:2},{name:'Joghurt',unit:'g',base:100},{name:'Basmati-Reis',unit:'g',base:300}],
+   steps:[
+    {text:'Hähnchen würfeln. Mit Joghurt und halben Gewürzen vermengen, 30 Min marinieren.',tip:'Je länger mariniert, desto zarter.',timer:1800,type:'wait',ingRefs:['Hähnchenbrust','Joghurt','Tikka Masala Gewürz']},
+    {text:'Hähnchen in heißer Pfanne scharf anbraten. Herausnehmen.',tip:null,timer:null,type:'cook',ingRefs:['Hähnchenbrust']},
+    {text:'Zwiebeln und Knoblauch glasig dünsten. Restliche Gewürze 1 Min rösten.',tip:null,timer:60,type:'cook',ingRefs:['Zwiebel','Knoblauch','Tikka Masala Gewürz']},
+    {text:'Passierte Tomaten zugießen und 15 Min köcheln.',tip:null,timer:900,type:'wait',ingRefs:['Tomaten passiert']},
+    {text:'Hähnchen zurückgeben, Sahne einrühren, 10 Min ziehen. Mit Reis servieren.',tip:'Mit Koriander und Zitrone garnieren.',timer:600,type:'wait',ingRefs:['Sahne','Basmati-Reis']},
+   ]},
 ];
-let nextId = 5;
+let nextId=5;
+let currentRecipeId=null,currentPortions=2,basePortions=2;
+let cartItems=[],cartIdCounter=0,editRecipeId=null,wizardStep=0;
 
-// ══ STATE ══
-let currentRecipeId = null;
-let currentPortions = 2;
-let basePortions = 2;
-let cartItems = [];
-let cartIdCounter = 0;
-let editRecipeId = null;
-let wizardStep = 0;
-const wizardTotalSteps = 4;
-
-// ══ HELPERS ══
-function scaleAmount(ing) {
-  if (ing.base === null) return 'nach Geschmack';
-  const s = (ing.base / basePortions) * currentPortions;
-  const r = Math.round(s * 10) / 10;
-  return `${r % 1 === 0 ? r : r.toFixed(1)} ${ing.unit}`;
+function scaleAmount(ing){
+  if(ing.base===null)return'nach Geschmack';
+  const s=(ing.base/basePortions)*currentPortions,r=Math.round(s*10)/10;
+  return`${r%1===0?r:r.toFixed(1)} ${ing.unit}`;
+}
+function hasWaitSteps(r){return r.steps.some(s=>s.type==='wait');}
+function totalWaitTime(r){
+  const secs=r.steps.filter(s=>s.type==='wait'&&s.timer).reduce((a,s)=>a+s.timer,0);
+  if(!secs)return null;const m=Math.round(secs/60);
+  return m>=60?`${Math.floor(m/60)} Std${m%60>0?' '+m%60+' Min':''}`:m+' Min';
 }
 
-function hasWaitSteps(r) { return r.steps.some(s=>s.type==='wait'); }
-function totalWaitTime(r) {
-  const secs = r.steps.filter(s=>s.type==='wait' && s.timer).reduce((a,s)=>a+s.timer,0);
-  if (!secs) return null;
-  const m = Math.round(secs/60);
-  return m >= 60 ? `${Math.floor(m/60)} Std ${m%60>0?m%60+' Min':''}`.trim() : `${m} Min`;
+const LS_KEY='artjom_custom_recipes';
+function saveCustomRecipes(){try{localStorage.setItem(LS_KEY,JSON.stringify(recipes.filter(r=>r.id>=5)));}catch(e){}}
+function loadCustomRecipes(){
+  try{const saved=localStorage.getItem(LS_KEY);if(!saved)return;
+    JSON.parse(saved).forEach(r=>{if(!recipes.find(x=>x.id===r.id)){recipes.push(r);if(r.id>=nextId)nextId=r.id+1;}});}catch(e){}
 }
+loadCustomRecipes();
 
-// ══ GRID ══
-function renderGrid(list) {
-  document.getElementById('recipeGrid').innerHTML = list.map(r => `
+// Helper: wiggly border span
+function W(gray,strong){return`<span class="wbo${gray?' gray':''}${strong?' strong':''}"></span>`;}
+
+function renderGrid(list){
+  document.getElementById('recipeGrid').innerHTML=list.map(r=>`
     <div class="recipe-card" onclick="showDetail(${r.id})">
-      <div class="card-img-placeholder">${r.emoji}</div>
-      <div class="card-body">
-        <div class="card-title">${r.title}</div>
-        <div class="card-tags">
-          <span class="tag tag-accent">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            ${r.time}
-          </span>
-          ${r.tags.map(t=>`<span class="tag">${t}</span>`).join('')}
-          ${hasWaitSteps(r)?`<span class="tag tag-wait">⏳ ${totalWaitTime(r)||'Wartezeit'}</span>`:''}
+      ${W(false,true)}
+      <div class="recipe-card-clip">
+        <div class="card-img">${r.emoji}</div>
+        <div class="card-body">
+          <div class="card-title">${r.title}</div>
+          <div class="card-tags">
+            <span class="tag">⏱ ${r.time}</span>
+            ${r.tags.map(t=>`<span class="tag tag-plain">${W(true)}<span>${t}</span></span>`).join('')}
+            ${hasWaitSteps(r)?`<span class="tag tag-wait">${W(true)}⏳ ${totalWaitTime(r)||'Wartezeit'}</span>`:''}
+          </div>
         </div>
       </div>
     </div>`).join('');
 }
-renderGrid(recipes);
 
-let activeCategory = '';
-
-function filterCat(el, cat) {
-  activeCategory = cat;
-  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+let activeCategory='';
+function filterCat(el,cat){
+  activeCategory=cat;
+  document.querySelectorAll('.cat-pill').forEach(p=>{
+    p.classList.remove('active');
+    const s=p.querySelector('.wbo');if(s)s.classList.add('gray');
+  });
   el.classList.add('active');
-  const titles = { '': 'Alle Rezepte', 'Frühstück': '🌅 Frühstück', 'Hauptgericht': '🍴 Hauptgericht', 'Dessert': '🍰 Dessert', 'Drinks': '🥤 Drinks' };
-  document.getElementById('sectionTitle').textContent = titles[cat] || cat;
+  // Active pill has blue bg — hide border (no need for wbo visibility)
+  const s=el.querySelector('.wbo');if(s){s.classList.remove('gray');s.style.opacity='0';}
+  // Restore opacity for other pills
+  document.querySelectorAll('.cat-pill:not(.active) .wbo').forEach(w=>w.style.opacity='1');
+  const titles={'':'Alle Rezepte','Frühstück':'Frühstück','Hauptgericht':'Hauptgericht','Dessert':'Dessert','Drinks':'Drinks'};
+  document.getElementById('sectionTitle').textContent=titles[cat]||cat;
   applyFilters();
 }
-
-function applyFilters() {
-  const q = document.getElementById('searchInput').value.toLowerCase();
-  const filtered = recipes.filter(r => {
-    const matchCat = !activeCategory || r.tags.includes(activeCategory);
-    const matchSearch = !q || r.title.toLowerCase().includes(q) || r.tags.some(t => t.toLowerCase().includes(q));
-    return matchCat && matchSearch;
-  });
-  renderGrid(filtered);
+function applyFilters(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  renderGrid(recipes.filter(r=>{
+    const mc=!activeCategory||r.tags.includes(activeCategory);
+    const ms=!q||r.title.toLowerCase().includes(q)||r.tags.some(t=>t.toLowerCase().includes(q));
+    return mc&&ms;
+  }));
 }
+document.getElementById('searchInput').addEventListener('input',applyFilters);
+renderGrid(recipes);
 
-document.getElementById('searchInput').addEventListener('input', applyFilters);
-
-// ══ PORTIONS ══
-function changePortions(delta) {
-  const r = recipes.find(x=>x.id===currentRecipeId); if (!r) return;
-  currentPortions = Math.max(1, currentPortions + delta);
-  document.getElementById('portionsValue').textContent = currentPortions;
+function changePortions(delta){
+  const r=recipes.find(x=>x.id===currentRecipeId);if(!r)return;
+  currentPortions=Math.max(1,currentPortions+delta);
+  document.getElementById('portionsValue').textContent=currentPortions;
   renderIngredients(r);
 }
-
-function renderIngredients(r) {
-  document.getElementById('ingredientList').innerHTML = r.ingredients.map(ing => `
+function renderIngredients(r){
+  document.getElementById('ingredientList').innerHTML=r.ingredients.map((ing,i)=>`
     <li class="ingredient-item">
       <span class="ingredient-name">${ing.name}</span>
       <span class="ingredient-amount">${scaleAmount(ing)}</span>
-    </li>`).join('');
+    </li>${i<r.ingredients.length-1?`<svg style="display:block;width:100%;height:8px;overflow:visible" viewBox="0 0 300 8" preserveAspectRatio="none"><path d="M0,4 Q25,2 50,4 Q75,6 100,4 Q125,2 150,4 Q175,6 200,4 Q225,2 250,4 Q275,6 300,4" stroke="#D8D4CC" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>`:''}`).join('');
+  // Wrap list in wiggly card
+  const list = document.getElementById('ingredientList');
+  const card = list.parentElement;
+  if(!card.classList.contains('ingredient-card')){
+    const wrapper = document.createElement('div');
+    wrapper.className = 'ingredient-card';
+    wrapper.innerHTML = '<span class="wbo"></span>';
+    list.parentNode.insertBefore(wrapper, list);
+    wrapper.appendChild(list);
+  }
 }
 
-// ══ DETAIL ══
-function showDetail(id) {
-  const r = recipes.find(x=>x.id===id); if (!r) return;
-  currentRecipeId = id;
-  currentPortions = r.servings;
-  basePortions = r.servings;
-
-  document.getElementById('detailEmoji').textContent = r.emoji;
-  document.getElementById('detailTitle').textContent = r.title;
-  document.getElementById('portionsValue').textContent = currentPortions;
-  document.getElementById('detailMeta').innerHTML = `
-    <span class="meta-pill accent"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${r.time}</span>
-    ${r.tags.map(t=>`<span class="meta-pill">${t}</span>`).join('')}
-    ${hasWaitSteps(r)?`<span class="meta-pill">⏳ ${totalWaitTime(r)||'Wartezeit'}</span>`:''}
+function showDetail(id){
+  const r=recipes.find(x=>x.id===id);if(!r)return;
+  currentRecipeId=id;currentPortions=r.servings;basePortions=r.servings;
+  document.getElementById('detailEmoji').textContent=r.emoji;
+  document.getElementById('detailTitle').textContent=r.title;
+  document.getElementById('portionsValue').textContent=currentPortions;
+  document.getElementById('detailMeta').innerHTML=`
+    <span class="meta-pill">⏱ ${r.time}</span>
+    ${r.tags.map(t=>`<span class="meta-pill plain">${W()}<span>${t}</span></span>`).join('')}
+    ${hasWaitSteps(r)?`<span class="meta-pill plain">${W()}<span>⏳ ${totalWaitTime(r)||'Wartezeit'}</span></span>`:''}
   `;
-
   renderIngredients(r);
-
-  document.getElementById('equipmentPanel').innerHTML = r.equipment && r.equipment.length
-    ? `<div class="equipment-label">Benötigte Geräte</div><div class="equipment-list">${r.equipment.map(e=>`<div class="equipment-chip">${e.name}</div>`).join('')}</div>`
-    : '';
-
+  document.getElementById('equipmentPanel').innerHTML=r.equipment&&r.equipment.length
+    ?`<div class="equipment-label">Benötigte Geräte</div><div class="equipment-list">${r.equipment.map(e=>`<div class="equipment-chip">${W(true)}<span>${e.icon}</span><span>${e.name}</span></div>`).join('')}</div>`
+    :`<p style="color:var(--ink-light);font-size:14px;padding:16px 0">Keine besonderen Geräte nötig.</p>`;
   renderSteps(r);
-
   document.querySelectorAll('.detail-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
   ['tab-ingredients','tab-steps'].forEach((p,i)=>document.getElementById(p).classList.toggle('active',i===0));
-  setScreen('detail');
-  window.scrollTo(0,0);
+  setScreen('detail');window.scrollTo(0,0);
+  requestAnimationFrame(drawTabLine);
 }
 
-function renderSteps(r) {
-  document.getElementById('stepsTimeline').innerHTML = r.steps.map((s,i) => {
-    const isWait = s.type === 'wait';
-    // Build ingredient chips with current scaled amounts
-    const chips = (s.ingRefs||[]).map(name => {
-      const ing = r.ingredients.find(x=>x.name===name);
-      if (!ing) return '';
-      return `<span class="ti-chip">${name}${ing.base!==null?' · '+scaleAmount(ing):''}</span>`;
-    }).join('');
+function wigglePath(x1,x2,y){
+  const len=x2-x1;const segs=Math.max(4,Math.round(len/22));
+  let d=`M${x1},${y}`;
+  for(let k=1;k<=segs;k++){
+    const x=x1+(len/segs)*k;
+    const yOff=(k%2===0?1.8:-1.8);
+    d+=` Q${x-(len/segs/2)},${y+yOff} ${x},${y}`;
+  }
+  return d;
+}
 
-    return `
+function drawTabLine(){
+  const tabs=document.querySelector('.detail-tabs');if(!tabs)return;
+  let svg=tabs.querySelector('.tab-line-svg');
+  if(!svg){
+    svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('class','tab-line-svg');
+    svg.style.cssText='position:absolute;bottom:0;left:0;width:100%;height:14px;overflow:visible;pointer-events:none;';
+    tabs.appendChild(svg);
+  }
+  svg.innerHTML='';
+  const w=tabs.offsetWidth;
+  const base=document.createElementNS('http://www.w3.org/2000/svg','path');
+  base.setAttribute('d',wigglePath(0,w,7));
+  base.setAttribute('stroke','#D8D4CC');base.setAttribute('stroke-width','2');base.setAttribute('fill','none');base.setAttribute('stroke-linecap','round');
+  svg.appendChild(base);
+  const activeTab=tabs.querySelector('.detail-tab.active');
+  if(activeTab){
+    const idx=Array.from(tabs.querySelectorAll('.detail-tab')).indexOf(activeTab);
+    const x1=(w/2)*idx, x2=x1+(w/2);
+    const accent=document.createElementNS('http://www.w3.org/2000/svg','path');
+    accent.setAttribute('d',wigglePath(x1,x2,7));
+    accent.setAttribute('stroke','#000ED3');accent.setAttribute('stroke-width','2.5');accent.setAttribute('fill','none');accent.setAttribute('stroke-linecap','round');
+    svg.appendChild(accent);
+  }
+}
+
+function renderSteps(r){
+  document.getElementById('stepsTimeline').innerHTML=r.steps.map((s,i)=>{
+    const isWait=s.type==='wait';
+    const chips=(s.ingRefs||[]).map(name=>{
+      const ing=r.ingredients.find(x=>x.name===name);if(!ing)return'';
+      return`<span class="ti-chip">${name}${ing.base!==null?' · '+scaleAmount(ing):''}</span>`;
+    }).join('');
+    return`
     <div class="timeline-step ${i===0?'active-step':''} ${isWait?'wait-step':''}" id="step-${r.id}-${i}">
-      <div class="timeline-dot" onclick="toggleStep(${r.id},${i})">${i+1}</div>
+      <div class="timeline-dot-wrap" onclick="toggleStep(${r.id},${i})">
+        <div class="timeline-dot">
+          <span class="wbo gray"></span>
+          <span>${i+1}</span>
+        </div>
+      </div>
       <div class="timeline-content">
+        <span class="wbo gray"></span>
         <div class="timeline-step-num">Schritt ${i+1} von ${r.steps.length}</div>
         ${isWait?`<div class="wait-badge">⏳ Wartezeit</div>`:''}
         <div class="timeline-text">${s.text}</div>
@@ -642,59 +748,75 @@ function renderSteps(r) {
         <div class="step-footer">
           ${s.timer?`
             <div class="inline-timer" id="itimer-${r.id}-${i}">
-              <span style="font-size:13px">${isWait?'⏳':'⏱'}</span>
+              <span>${isWait?'⏳':'⏱'}</span>
               <span class="inline-timer-time" id="itime-${r.id}-${i}">${formatTime(s.timer)}</span>
               <div class="inline-timer-progress"><div class="inline-timer-bar" id="ibar-${r.id}-${i}" style="width:100%"></div></div>
               <button class="inline-timer-btn" id="itbtn-${r.id}-${i}" onclick="toggleInlineTimer(${r.id},${i},${s.timer})">▶</button>
             </div>`:`<span></span>`}
-          <button class="step-check-btn" onclick="toggleStep(${r.id},${i})">Erledigt ✓</button>
+          <button class="step-check-btn" onclick="toggleStep(${r.id},${i})">${W()}Erledigt ✓</button>
         </div>
       </div>
     </div>`;
   }).join('');
+
+  // Wiggly vertical line between dots
+  requestAnimationFrame(()=>{
+    const tl=document.getElementById('stepsTimeline');if(!tl)return;
+    const old=tl.querySelector('.timeline-line-svg');if(old)old.remove();
+    const wraps=tl.querySelectorAll('.timeline-dot-wrap');
+    if(wraps.length<2)return;
+    const tlRect=tl.getBoundingClientRect();
+    const topY=wraps[0].getBoundingClientRect().top-tlRect.top+12;
+    const botY=wraps[wraps.length-1].getBoundingClientRect().top-tlRect.top+12;
+    const cx=11,h=botY-topY;
+    const segs=Math.max(4,Math.round(h/18));
+    let d=`M${cx},${topY}`;
+    for(let k=1;k<=segs;k++){const y=topY+(h/segs)*k;const xo=(k%2===0?1.5:-1.5);d+=` Q${cx+xo},${y-(h/segs/2)} ${cx},${y}`;}
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('class','timeline-line-svg');
+    svg.style.cssText=`position:absolute;left:0;top:0;width:40px;height:${tl.offsetHeight}px;overflow:visible;pointer-events:none;z-index:0;`;
+    const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+    const grad=document.createElementNS('http://www.w3.org/2000/svg','linearGradient');
+    grad.setAttribute('id','tlg');grad.setAttribute('x1','0');grad.setAttribute('y1','0');grad.setAttribute('x2','0');grad.setAttribute('y2','1');
+    const s1=document.createElementNS('http://www.w3.org/2000/svg','stop');s1.setAttribute('offset','0%');s1.setAttribute('stop-color','#000ED3');
+    const s2=document.createElementNS('http://www.w3.org/2000/svg','stop');s2.setAttribute('offset','100%');s2.setAttribute('stop-color','#D8D4CC');
+    grad.appendChild(s1);grad.appendChild(s2);defs.appendChild(grad);
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',d);path.setAttribute('stroke','url(#tlg)');path.setAttribute('stroke-width','2');path.setAttribute('fill','none');path.setAttribute('stroke-linecap','round');
+    svg.appendChild(defs);svg.appendChild(path);
+    tl.insertBefore(svg,tl.firstChild);
+  });
 }
 
-function toggleStep(recipeId, stepIdx) {
-  const step = document.getElementById(`step-${recipeId}-${stepIdx}`);
-  const wasDone = step.classList.contains('done');
-  step.classList.toggle('done', !wasDone);
-  step.classList.remove('active-step');
-  if (wasDone) { step.classList.add('active-step'); return; }
-  const r = recipes.find(x=>x.id===recipeId);
-  if (r && stepIdx+1 < r.steps.length) {
-    const next = document.getElementById(`step-${recipeId}-${stepIdx+1}`);
-    if (next && !next.classList.contains('done')) {
-      next.classList.add('active-step');
-      next.scrollIntoView({behavior:'smooth',block:'center'});
-    }
-  }
+function toggleStep(recipeId,si){
+  const step=document.getElementById(`step-${recipeId}-${si}`);
+  const wasDone=step.classList.contains('done');
+  step.classList.toggle('done',!wasDone);step.classList.remove('active-step');
+  if(wasDone){step.classList.add('active-step');return;}
+  const r=recipes.find(x=>x.id===recipeId);
+  if(r&&si+1<r.steps.length){const n=document.getElementById(`step-${recipeId}-${si+1}`);if(n&&!n.classList.contains('done')){n.classList.add('active-step');n.scrollIntoView({behavior:'smooth',block:'center'});}}
 }
 
-// ══ CART ══
-function addAllToCart() {
-  const r = recipes.find(x=>x.id===currentRecipeId); if (!r) return;
-  r.ingredients.forEach(ing => {
-    if (!cartItems.some(c=>c.recipeId===r.id && c.name===ing.name))
+function addAllToCart(){
+  const r=recipes.find(x=>x.id===currentRecipeId);if(!r)return;
+  r.ingredients.forEach(ing=>{
+    if(!cartItems.some(c=>c.recipeId===r.id&&c.name===ing.name))
       cartItems.push({id:cartIdCounter++,name:ing.name,amount:scaleAmount(ing),recipeId:r.id,recipeTitle:r.title,checked:false});
   });
   updateCartBadge();
-  const btn = document.querySelector('.add-all-btn');
-  if (btn) { btn.style.cssText='background:var(--green-light);border-color:var(--green);color:var(--green)'; setTimeout(()=>{btn.style.cssText='';},800); }
+  const btn=document.querySelector('.add-all-btn');
+  if(btn){btn.style.background='var(--green)';btn.style.color='white';setTimeout(()=>{btn.style.background='';btn.style.color='';},800);}
 }
-
-function renderCart() {
-  const checked = cartItems.filter(c=>c.checked).length;
-  document.getElementById('cartSubtitle').textContent = `${cartItems.length} Artikel${checked>0?' · '+checked+' erledigt':''}`;
-  if (cartItems.length===0) {
-    document.getElementById('cartContent').innerHTML=`<div class="cart-empty"><div class="cart-empty-icon">🛒</div><div class="cart-empty-text">Dein Warenkorb ist leer</div><div class="cart-empty-sub">Öffne ein Rezept und füge Zutaten hinzu</div></div>`;
-    return;
-  }
-  const byRecipe = {};
+function renderCart(){
+  const checked=cartItems.filter(c=>c.checked).length;
+  document.getElementById('cartSubtitle').textContent=`${cartItems.length} Artikel${checked>0?' · '+checked+' erledigt':''}`;
+  if(!cartItems.length){document.getElementById('cartContent').innerHTML=`<div class="cart-empty"><div class="cart-empty-icon">🛒</div><div class="cart-empty-text">Noch nichts drin!</div><div class="cart-empty-sub">Öffne ein Rezept und füge Zutaten hinzu</div></div>`;return;}
+  const byRecipe={};
   cartItems.forEach(c=>{if(!byRecipe[c.recipeTitle])byRecipe[c.recipeTitle]=[];byRecipe[c.recipeTitle].push(c);});
   let html='';
   Object.entries(byRecipe).forEach(([title,items])=>{
     html+=`<div class="cart-section"><div class="cart-section-title"><span>${title}</span><span class="cart-clear-btn" onclick="clearRecipeFromCart('${title}')">Entfernen</span></div>
-    <ul class="cart-list">${items.map(item=>`
+    <ul class="cart-list">${W(true)}${items.map(item=>`
       <li class="cart-item ${item.checked?'checked':''}" onclick="toggleCartItem(${item.id})">
         <div class="cart-checkbox">${item.checked?`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`:''}</div>
         <div class="cart-item-name">${item.name}</div>
@@ -702,37 +824,31 @@ function renderCart() {
         <div class="cart-remove-btn" onclick="event.stopPropagation();removeCartItem(${item.id})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
       </li>`).join('')}</ul></div>`;
   });
-  if (checked>0) html+=`<div class="cart-section" style="padding-bottom:20px"><div class="cart-section-title"><span>Erledigt (${checked})</span><span class="cart-clear-btn" onclick="clearChecked()">Alle löschen</span></div></div>`;
+  if(checked>0)html+=`<div class="cart-section" style="padding-bottom:20px"><div class="cart-section-title"><span>Erledigt (${checked})</span><span class="cart-clear-btn" onclick="clearChecked()">Alle löschen</span></div></div>`;
   document.getElementById('cartContent').innerHTML=html;
 }
-
-function toggleCartItem(id){const item=cartItems.find(c=>c.id===id);if(item){item.checked=!item.checked;renderCart();updateCartBadge();}}
+function toggleCartItem(id){const i=cartItems.find(c=>c.id===id);if(i){i.checked=!i.checked;renderCart();updateCartBadge();}}
 function removeCartItem(id){cartItems=cartItems.filter(c=>c.id!==id);renderCart();updateCartBadge();}
 function clearRecipeFromCart(title){cartItems=cartItems.filter(c=>c.recipeTitle!==title);renderCart();updateCartBadge();}
 function clearChecked(){cartItems=cartItems.filter(c=>!c.checked);renderCart();updateCartBadge();}
 function updateCartBadge(){const n=cartItems.filter(c=>!c.checked).length;const b=document.getElementById('cartBadge');b.textContent=n;b.classList.toggle('visible',n>0);}
 
-// ══ INLINE TIMER ══
 function formatTime(sec){if(sec>=3600){const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);return`${h}:${String(m).padStart(2,'0')} Std`;}return`${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;}
 const timerState={};
 function toggleInlineTimer(rid,si,total){
   const key=`${rid}-${si}`;
-  if(!timerState[key]){
-    timerState[key]={remaining:total,total,running:true,interval:null};
-    runInlineTimer(rid,si);
-  } else {
+  if(!timerState[key]){timerState[key]={remaining:total,total,running:true,interval:null};runInlineTimer(rid,si);}
+  else{
     const s=timerState[key];
     if(s.remaining<=0){
       clearInterval(s.interval);delete timerState[key];
-      const w=document.getElementById(`itimer-${rid}-${si}`);
-      if(w)w.classList.remove('running','finished');
+      const w=document.getElementById(`itimer-${rid}-${si}`);if(w)w.classList.remove('running','finished');
       const t=document.getElementById(`itime-${rid}-${si}`);if(t)t.textContent=formatTime(total);
       const bar=document.getElementById(`ibar-${rid}-${si}`);if(bar)bar.style.width='100%';
       const btn=document.getElementById(`itbtn-${rid}-${si}`);if(btn)btn.textContent='▶';
-    } else {
+    }else{
       s.running=!s.running;
-      const btn=document.getElementById(`itbtn-${rid}-${si}`);
-      const w=document.getElementById(`itimer-${rid}-${si}`);
+      const btn=document.getElementById(`itbtn-${rid}-${si}`),w=document.getElementById(`itimer-${rid}-${si}`);
       if(s.running){if(btn)btn.textContent='⏸';if(w){w.classList.add('running');w.classList.remove('finished');}}
       else{if(btn)btn.textContent='▶';if(w)w.classList.remove('running');}
     }
@@ -744,64 +860,60 @@ function runInlineTimer(rid,si){
   if(w)w.classList.add('running');if(btn)btn.textContent='⏸';if(t)t.textContent=formatTime(s.remaining);
   s.interval=setInterval(()=>{
     if(!s.running)return;s.remaining--;
-    if(t)t.textContent=formatTime(s.remaining);
-    if(bar)bar.style.width=`${(s.remaining/s.total)*100}%`;
+    if(t)t.textContent=formatTime(s.remaining);if(bar)bar.style.width=`${(s.remaining/s.total)*100}%`;
     if(s.remaining<=0){clearInterval(s.interval);s.running=false;if(t)t.textContent='✓ Fertig';if(bar)bar.style.width='0%';if(w){w.classList.remove('running');w.classList.add('finished');}if(btn)btn.textContent='↺';}
   },1000);
 }
 
-// ══ EDIT ══
 function openEdit(){
   const r=recipes.find(x=>x.id===currentRecipeId);if(!r)return;
   editRecipeId=r.id;
-  const body=document.getElementById('editBody');
-  body.innerHTML=`
+  const wi=(id,val,ph='',type='text',style='')=>`<div class="form-input-wrap"><span class="wbo gray"></span><input class="form-input" id="${id}" value="${val}" placeholder="${ph}" type="${type}" ${style}></div>`;
+  document.getElementById('editBody').innerHTML=`
     <div class="form-section-title">Grundinfos</div>
-    <div class="form-group"><label class="form-label">Emoji</label><input class="form-input" id="e-emoji" value="${r.emoji}" maxlength="4"></div>
-    <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="e-name" value="${r.title}"></div>
+    <div class="form-group"><label class="form-label">Emoji</label>${wi('e-emoji',r.emoji,'',  'text','maxlength="4"')}</div>
+    <div class="form-group"><label class="form-label">Name</label>${wi('e-name',r.title)}</div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Kochzeit</label><input class="form-input" id="e-time" value="${r.time}"></div>
-      <div class="form-group"><label class="form-label">Portionen</label><input class="form-input" type="number" id="e-servings" value="${r.servings}" min="1"></div>
+      <div class="form-group"><label class="form-label">Kochzeit</label>${wi('e-time',r.time)}</div>
+      <div class="form-group"><label class="form-label">Portionen</label>${wi('e-servings',r.servings,'2','number','min="1"')}</div>
     </div>
-    <div class="form-group"><label class="form-label">Kategorien (Komma)</label><input class="form-input" id="e-tags" value="${r.tags.join(', ')}" placeholder="Frühstück, Lunch, Abendessen, Dessert, Drinks"></div>
-
+    <div class="form-group"><label class="form-label">Kategorien (Komma)</label>${wi('e-tags',r.tags.join(', '))}</div>
     <div class="form-section-title" style="margin-top:8px">Zutaten</div>
     <div class="list-items" id="e-ing-list">
-      ${r.ingredients.map((ing,i)=>`
-        <div class="list-item-row" id="ei-${i}">
-          <input class="form-input" placeholder="Zutat" value="${ing.name}" oninput="updateEditIng(${i},'name',this.value)">
-          <input class="form-input" style="width:64px" placeholder="Menge" value="${ing.base??''}" type="number" min="0" oninput="updateEditIng(${i},'base',this.value)">
-          <input class="form-input" style="width:64px" placeholder="Einheit" value="${ing.unit??''}" oninput="updateEditIng(${i},'unit',this.value)">
-          <button class="remove-item-btn" onclick="removeEditIng(${i})">×</button>
-        </div>`).join('')}
+      ${r.ingredients.map((ing,i)=>`<div class="list-item-row" id="ei-${i}">
+        <div class="form-input-wrap" style="flex:1"><span class="wbo gray"></span><input class="form-input" placeholder="Zutat" value="${ing.name}" oninput="updateEditIng(${i},'name',this.value)"></div>
+        <div class="form-input-wrap" style="width:64px"><span class="wbo gray"></span><input class="form-input" placeholder="Menge" value="${ing.base??''}" type="number" min="0" oninput="updateEditIng(${i},'base',this.value)"></div>
+        <div class="form-input-wrap" style="width:64px"><span class="wbo gray"></span><input class="form-input" placeholder="Einheit" value="${ing.unit??''}" oninput="updateEditIng(${i},'unit',this.value)"></div>
+        <button class="remove-item-btn" onclick="removeEditIng(${i})">×</button>
+      </div>`).join('')}
     </div>
     <button class="add-item-btn" onclick="addEditIng()">+ Zutat hinzufügen</button>
-
     <div class="form-section-title" style="margin-top:8px">Geräte</div>
     <div class="list-items" id="e-equip-list">
-      ${(r.equipment||[]).map((eq,i)=>`
-        <div class="list-item-row" id="ee-${i}">
-          <input class="form-input" style="width:52px" placeholder="🍳" value="${eq.icon}" oninput="updateEditEquip(${i},'icon',this.value)">
-          <input class="form-input" placeholder="Gerät" value="${eq.name}" oninput="updateEditEquip(${i},'name',this.value)">
-          <button class="remove-item-btn" onclick="removeEditEquip(${i})">×</button>
-        </div>`).join('')}
+      ${(r.equipment||[]).map((eq,i)=>`<div class="list-item-row" id="ee-${i}">
+        <div class="form-input-wrap" style="width:52px"><span class="wbo gray"></span><input class="form-input" placeholder="🍳" value="${eq.icon}" oninput="updateEditEquip(${i},'icon',this.value)"></div>
+        <div class="form-input-wrap" style="flex:1"><span class="wbo gray"></span><input class="form-input" placeholder="Gerät" value="${eq.name}" oninput="updateEditEquip(${i},'name',this.value)"></div>
+        <button class="remove-item-btn" onclick="removeEditEquip(${i})">×</button>
+      </div>`).join('')}
     </div>
     <button class="add-item-btn" onclick="addEditEquip()">+ Gerät hinzufügen</button>
-
-    <div class="form-section-title" style="margin-top:8px">Zubereitungsschritte</div>
-    <div class="list-items" id="e-steps-list">
-      ${r.steps.map((s,i)=>editStepHTML(s,i)).join('')}
-    </div>
+    <div class="form-section-title" style="margin-top:8px">Schritte</div>
+    <div class="list-items" id="e-steps-list">${r.steps.map((s,i)=>editStepHTML(s,i)).join('')}</div>
     <button class="add-item-btn" onclick="addEditStep()">+ Schritt hinzufügen</button>
   `;
-  setScreen('edit');
-  window.scrollTo(0,0);
+  setScreen('edit');window.scrollTo(0,0);
 }
-
+function deleteRecipe(){
+  const r=recipes.find(x=>x.id===currentRecipeId);
+  if(!r)return;
+  if(!confirm(`"${r.title}" wirklich löschen?`))return;
+  recipes=recipes.filter(x=>x.id!==currentRecipeId);
+  saveCustomRecipes();renderGrid(recipes);showHome();
+}
 function editStepHTML(s,i){
-  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;display:flex;flex-direction:column;gap:8px;" id="es-${i}">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Schritt ${i+1}</span>
+  return`<div style="background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px" id="es-${i}">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:11px;font-weight:700;color:var(--ink-light);text-transform:uppercase">Schritt ${i+1}</span>
       <button class="remove-item-btn" onclick="removeEditStep(${i})" style="width:26px;height:26px;font-size:14px">×</button>
     </div>
     <div class="step-type-row">
@@ -810,25 +922,22 @@ function editStepHTML(s,i){
     </div>
     <textarea class="form-textarea" style="min-height:64px" oninput="updateEditStep(${i},'text',this.value)" placeholder="Beschreibung…">${s.text}</textarea>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Timer (Sek, optional)</label><input class="form-input" type="number" placeholder="z.B. 600" value="${s.timer??''}" oninput="updateEditStep(${i},'timer',this.value)"></div>
-      <div class="form-group"><label class="form-label">Tipp (optional)</label><input class="form-input" placeholder="Tipp…" value="${s.tip??''}" oninput="updateEditStep(${i},'tip',this.value)"></div>
+      <div class="form-group"><label class="form-label">Timer (Sek)</label><input class="form-input" type="number" placeholder="z.B. 600" value="${s.timer??''}" oninput="updateEditStep(${i},'timer',this.value)"></div>
+      <div class="form-group"><label class="form-label">Tipp</label><input class="form-input" placeholder="optional" value="${s.tip??''}" oninput="updateEditStep(${i},'tip',this.value)"></div>
     </div>
   </div>`;
 }
-
-// Edit helpers
 function getEditRecipe(){return recipes.find(x=>x.id===editRecipeId);}
-function updateEditIng(i,field,val){const r=getEditRecipe();if(!r)return;if(field==='base')r.ingredients[i].base=val===''?null:parseFloat(val);else r.ingredients[i][field]=val||null;}
+function updateEditIng(i,f,v){const r=getEditRecipe();if(!r)return;if(f==='base')r.ingredients[i].base=v===''?null:parseFloat(v);else r.ingredients[i][f]=v||null;}
 function removeEditIng(i){const r=getEditRecipe();if(!r)return;r.ingredients.splice(i,1);openEdit();}
 function addEditIng(){const r=getEditRecipe();if(!r)return;r.ingredients.push({name:'',unit:'',base:null});openEdit();setTimeout(()=>{const rows=document.querySelectorAll('#e-ing-list .list-item-row');if(rows.length)rows[rows.length-1].querySelector('input').focus();},50);}
-function updateEditEquip(i,field,val){const r=getEditRecipe();if(!r)return;r.equipment[i][field]=val;}
+function updateEditEquip(i,f,v){const r=getEditRecipe();if(!r)return;r.equipment[i][f]=v;}
 function removeEditEquip(i){const r=getEditRecipe();if(!r)return;r.equipment.splice(i,1);openEdit();}
 function addEditEquip(){const r=getEditRecipe();if(!r)return;r.equipment.push({icon:'🔧',name:''});openEdit();}
-function updateEditStep(i,field,val){const r=getEditRecipe();if(!r)return;if(field==='timer')r.steps[i].timer=val===''?null:parseInt(val);else r.steps[i][field]=val||null;}
+function updateEditStep(i,f,v){const r=getEditRecipe();if(!r)return;if(f==='timer')r.steps[i].timer=v===''?null:parseInt(v);else r.steps[i][f]=v||null;}
 function setEditStepType(i,type,btn){const r=getEditRecipe();if(!r)return;r.steps[i].type=type;document.querySelectorAll(`#es-${i} .step-type-btn`).forEach(b=>{b.classList.remove('active-cook','active-wait');});btn.classList.add(type==='cook'?'active-cook':'active-wait');}
 function removeEditStep(i){const r=getEditRecipe();if(!r)return;r.steps.splice(i,1);openEdit();}
 function addEditStep(){const r=getEditRecipe();if(!r)return;r.steps.push({text:'',tip:null,timer:null,type:'cook',ingRefs:[]});openEdit();}
-
 function saveEdit(){
   const r=getEditRecipe();if(!r)return;
   r.emoji=document.getElementById('e-emoji').value||r.emoji;
@@ -836,241 +945,131 @@ function saveEdit(){
   r.time=document.getElementById('e-time').value||r.time;
   r.servings=parseInt(document.getElementById('e-servings').value)||r.servings;
   r.tags=document.getElementById('e-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
-  renderGrid(recipes);
-  showDetail(r.id);
+  saveCustomRecipes();renderGrid(recipes);showDetail(r.id);
 }
-
 function closeEdit(){if(currentRecipeId)showDetail(currentRecipeId);else showHome();}
 
-// ══ WIZARD ══
 function openWizard(){
-  closeFab();
-  wizardStep=0;
-  document.getElementById('wizardTitle').textContent='Neues Rezept';
-  // Reset fields
+  closeFab();wizardStep=0;
   ['w-emoji','w-name','w-time','w-tag'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('w-servings').value='2';
-  document.getElementById('w-diff').value='Leicht';
-  document.getElementById('w-ing-list').innerHTML='';
-  document.getElementById('w-equip-list').innerHTML='';
-  document.getElementById('w-steps-list').innerHTML='';
-  addWizardIngredient(); addWizardStep();
-  updateWizardUI();
-  setScreen('wizard');
-  window.scrollTo(0,0);
+  ['w-ing-list','w-equip-list','w-steps-list'].forEach(id=>document.getElementById(id).innerHTML='');
+  addWizardIngredient();addWizardStep();
+  updateWizardUI();setScreen('wizard');window.scrollTo(0,0);
 }
-
 function updateWizardUI(){
-  const progress=document.getElementById('wizardProgress');
-  progress.innerHTML=Array.from({length:wizardTotalSteps},(_,i)=>`<div class="wizard-step-dot ${i<wizardStep?'done':i===wizardStep?'active':''}"></div>`).join('');
+  document.getElementById('wizardProgress').innerHTML=Array.from({length:4},(_,i)=>
+    `<div class="wizard-step-dot ${i<wizardStep?'done':i===wizardStep?'active':''}"></div>`).join('');
   document.querySelectorAll('.wizard-panel').forEach((p,i)=>p.classList.toggle('active',i===wizardStep));
   document.getElementById('wizardPrevBtn').style.display=wizardStep>0?'block':'none';
-  document.getElementById('wizardNextBtn').textContent=wizardStep===wizardTotalSteps-1?'Rezept speichern ✓':'Weiter →';
+  document.getElementById('wizardNextBtn').textContent=wizardStep===3?'Rezept speichern ✓':'Weiter →';
   const titles=['Grundinfos','Zutaten','Geräte','Zubereitung'];
-  document.getElementById('wizardTitle').textContent=titles[wizardStep]||'Neues Rezept';
+  document.getElementById('wizardTitle').textContent=titles[wizardStep];
 }
-
-function wizardNext(){
-  if(wizardStep<wizardTotalSteps-1){wizardStep++;updateWizardUI();}
-  else{saveWizard();}
-}
+function wizardNext(){if(wizardStep<3){wizardStep++;updateWizardUI();}else saveWizard();}
 function wizardPrev(){if(wizardStep>0){wizardStep--;updateWizardUI();}}
-
 function addWizardIngredient(){
-  const list=document.getElementById('w-ing-list');
-  const i=list.children.length;
-  const div=document.createElement('div');div.className='list-item-row';div.id=`wi-${i}`;
+  const list=document.getElementById('w-ing-list'),div=document.createElement('div');div.className='list-item-row';
   div.innerHTML=`<input class="form-input" placeholder="Zutat"><input class="form-input" style="width:64px" placeholder="Menge" type="number" min="0"><input class="form-input" style="width:64px" placeholder="Einheit"><button class="remove-item-btn" onclick="this.parentElement.remove()">×</button>`;
   list.appendChild(div);
 }
-
 function addWizardEquipment(){
-  const list=document.getElementById('w-equip-list');
-  const div=document.createElement('div');div.className='list-item-row';
+  const list=document.getElementById('w-equip-list'),div=document.createElement('div');div.className='list-item-row';
   div.innerHTML=`<input class="form-input" style="width:52px" placeholder="🍳"><input class="form-input" placeholder="Gerät"><button class="remove-item-btn" onclick="this.parentElement.remove()">×</button>`;
   list.appendChild(div);
 }
-
 function addWizardStep(){
-  const list=document.getElementById('w-steps-list');
-  const i=list.children.length;
-  const div=document.createElement('div');
-  div.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;display:flex;flex-direction:column;gap:8px;';
-  div.innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between">
-      <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Schritt ${i+1}</span>
-      <button class="remove-item-btn" onclick="this.closest('div[style]').remove();renumberWizardSteps()" style="width:26px;height:26px;font-size:14px">×</button>
-    </div>
-    <div class="step-type-row">
-      <button class="step-type-btn active-cook" onclick="this.classList.add('active-cook');this.classList.remove('active-wait');this.nextElementSibling.classList.remove('active-wait');this.nextElementSibling.classList.remove('active-cook');this.dataset.type='cook'">🔥 Kochen</button>
-      <button class="step-type-btn" onclick="this.classList.add('active-wait');this.classList.remove('active-cook');this.previousElementSibling.classList.remove('active-cook');this.previousElementSibling.classList.remove('active-wait');this.dataset.type='wait'">⏳ Warten</button>
-    </div>
+  const list=document.getElementById('w-steps-list'),i=list.children.length,div=document.createElement('div');
+  div.style.cssText='background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px';
+  div.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--ink-light);text-transform:uppercase">Schritt ${i+1}</span><button class="remove-item-btn" onclick="this.closest('div[style]').remove()" style="width:26px;height:26px;font-size:14px">×</button></div>
+    <div class="step-type-row"><button class="step-type-btn active-cook" onclick="this.classList.add('active-cook');this.classList.remove('active-wait');this.nextElementSibling.classList.remove('active-wait','active-cook')">🔥 Kochen</button><button class="step-type-btn" onclick="this.classList.add('active-wait');this.classList.remove('active-cook');this.previousElementSibling.classList.remove('active-cook','active-wait')">⏳ Warten</button></div>
     <textarea class="form-textarea" style="min-height:64px" placeholder="Schritt beschreiben…"></textarea>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Timer (Sek)</label><input class="form-input" type="number" placeholder="optional"></div>
-      <div class="form-group"><label class="form-label">Tipp</label><input class="form-input" placeholder="optional"></div>
-    </div>`;
+    <div class="form-row"><div class="form-group"><label class="form-label">Timer (Sek)</label><input class="form-input" type="number" placeholder="optional"></div><div class="form-group"><label class="form-label">Tipp</label><input class="form-input" placeholder="optional"></div></div>`;
   list.appendChild(div);
 }
-
-function renumberWizardSteps(){
-  document.querySelectorAll('#w-steps-list > div').forEach((div,i)=>{
-    const label=div.querySelector('span');if(label)label.textContent=`Schritt ${i+1}`;
-  });
-}
-
 function saveWizard(){
   const ingredients=[];
   document.querySelectorAll('#w-ing-list .list-item-row').forEach(row=>{
-    const inputs=row.querySelectorAll('input');
-    const name=inputs[0].value.trim();
-    if(!name)return;
-    const base=inputs[1].value?parseFloat(inputs[1].value):null;
-    const unit=inputs[2].value.trim()||null;
-    ingredients.push({name,unit,base});
+    const inputs=row.querySelectorAll('input'),name=inputs[0].value.trim();if(!name)return;
+    ingredients.push({name,unit:inputs[2].value.trim()||null,base:inputs[1].value?parseFloat(inputs[1].value):null});
   });
-
   const equipment=[];
   document.querySelectorAll('#w-equip-list .list-item-row').forEach(row=>{
-    const inputs=row.querySelectorAll('input');
-    const name=inputs[1].value.trim();if(!name)return;
+    const inputs=row.querySelectorAll('input'),name=inputs[1].value.trim();if(!name)return;
     equipment.push({icon:inputs[0].value||'🔧',name});
   });
-
   const steps=[];
   document.querySelectorAll('#w-steps-list > div').forEach(div=>{
-    const typebtns=div.querySelectorAll('.step-type-btn');
-    const type=typebtns[1]&&typebtns[1].classList.contains('active-wait')?'wait':'cook';
-    const ta=div.querySelector('textarea');
-    const text=ta?ta.value.trim():'';if(!text)return;
-    const inputs=div.querySelectorAll('input[type="number"],.form-input:not([type="number"])');
-    const allInputs=div.querySelectorAll('input');
+    const ta=div.querySelector('textarea'),text=ta?ta.value.trim():'';if(!text)return;
+    const type=div.querySelectorAll('.step-type-btn')[1]?.classList.contains('active-wait')?'wait':'cook';
     const timerInput=div.querySelector('input[type="number"]');
-    const tipInputs=div.querySelectorAll('.form-input:not(textarea):not([type="number"])');
-    const tip=tipInputs.length?tipInputs[tipInputs.length-1].value.trim()||null:null;
-    const timer=timerInput&&timerInput.value?parseInt(timerInput.value):null;
-    steps.push({text,tip,timer,type,ingRefs:[]});
+    const tipInput=div.querySelectorAll('input:not([type="number"])')[0];
+    steps.push({text,tip:tipInput?.value.trim()||null,timer:timerInput?.value?parseInt(timerInput.value):null,type,ingRefs:[]});
   });
-
   const tags=document.getElementById('w-tag').value.split(',').map(t=>t.trim()).filter(Boolean);
-  const newR={
-    id:nextId++,
-    emoji:document.getElementById('w-emoji').value||'🍽️',
-    title:document.getElementById('w-name').value||'Mein Rezept',
-    time:document.getElementById('w-time').value||'?',
-    servings:parseInt(document.getElementById('w-servings').value)||2,
-    tags,equipment,ingredients,steps
-  };
-  recipes.push(newR);
-  renderGrid(recipes);
-  showDetail(newR.id);
+  const newR={id:nextId++,emoji:document.getElementById('w-emoji').value||'🍽️',title:document.getElementById('w-name').value||'Mein Rezept',time:document.getElementById('w-time').value||'?',servings:parseInt(document.getElementById('w-servings').value)||2,tags,equipment,ingredients,steps};
+  recipes.push(newR);saveCustomRecipes();renderGrid(recipes);showDetail(newR.id);
 }
-
 function closeWizard(){showHome();}
 
-// ══ NAV ══
 function setScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(name).classList.add('active');
   document.getElementById('navHome').classList.toggle('active',['home','detail','edit','wizard'].includes(name));
   document.getElementById('navCart').classList.toggle('active',name==='cart');
-  const showFab=name==='home';
-  document.getElementById('fab').style.display=showFab?'flex':'none';
-  document.getElementById('fabMenu').style.display=showFab?'flex':'none';
+  document.getElementById('fab').style.display=name==='home'?'flex':'none';
+  document.getElementById('fabMenu').style.display=name==='home'?'flex':'none';
 }
 function showHome(){closeFab();setScreen('home');window.scrollTo(0,0);}
 function showCart(){closeFab();renderCart();setScreen('cart');window.scrollTo(0,0);}
-
-// ══ TABS ══
 function switchTab(el,panelId){
   document.querySelectorAll('.detail-tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   el.classList.add('active');document.getElementById(panelId).classList.add('active');
-  // Re-render steps so ingredient chips use current portion scale
-  if(panelId==='tab-steps'){const r=recipes.find(x=>x.id===currentRecipeId);if(r)renderSteps(r);}}
+  if(panelId==='tab-steps'){const r=recipes.find(x=>x.id===currentRecipeId);if(r)renderSteps(r);}
+  requestAnimationFrame(drawTabLine);
+}
 
-// ══ FAB ══
 let fabOpen=false;
 function toggleFab(){fabOpen=!fabOpen;['fab','fabMenu','fabOverlay'].forEach(id=>document.getElementById(id).classList.toggle('open',fabOpen));}
 function closeFab(){fabOpen=false;['fab','fabMenu','fabOverlay'].forEach(id=>document.getElementById(id).classList.remove('open'));}
-
-// ══ MODALS ══
 function openImportModal(){closeFab();document.getElementById('importModal').classList.add('open');}
-function closeModal(id){document.getElementById(id).classList.remove('open');}
-// ══ IMPORT ══
-async function doImport() {
-  const url = document.getElementById('importUrl').value.trim();
-  if (!url) return;
-  const btn = document.getElementById('importBtn');
-  const status = document.getElementById('importStatus');
-  btn.disabled = true; btn.textContent = '⏳ Lädt…';
-  status.style.display = 'block'; status.textContent = 'Seite wird geladen…';
-
-  try {
-    // Fetch page via allorigins proxy
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-    const res = await fetch(proxy);
-    if (!res.ok) throw new Error('Seite nicht erreichbar');
-    const data = await res.json();
-    const html = data.contents || '';
-    // Strip tags, keep text
-    const text = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'')
-                     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'')
-                     .replace(/<[^>]+>/g,' ')
-                     .replace(/\s+/g,' ')
-                     .substring(0, 6000);
-
-    status.textContent = 'KI analysiert Rezept…';
-
-    const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: `Extrahiere das Rezept aus diesem Webseitentext und antworte NUR mit einem JSON-Objekt (kein Markdown, keine Erklärung):
-{
-  "emoji": "passendes Emoji",
-  "title": "Rezeptname",
-  "time": "z.B. 30 Min",
-  "difficulty": "Leicht|Mittel|Schwer",
-  "servings": 4,
-  "tags": ["Tag1","Tag2"],
-  "equipment": [{"icon":"🍳","name":"Gerät"}],
-  "ingredients": [{"name":"Zutat","unit":"g","base":200}],
-  "steps": [{"text":"Schritt","tip":null,"timer":null,"type":"cook","ingRefs":[]}]
-}
-Für "type": "cook" = aktives Kochen, "wait" = Warten/Ruhen/Marinieren/Gehen lassen.
-Für "timer": Sekunden als Zahl wenn eine Zeit angegeben wird, sonst null.
-Für Zutaten ohne Mengenangabe: unit:null, base:null.
-
-Webseitentext: ${text}`
-        }]
-      })
-    });
-
-    const aiData = await aiRes.json();
-    const raw = aiData.content?.[0]?.text || '';
-    const clean = raw.replace(/```json|```/g,'').trim();
-    const recipe = JSON.parse(clean);
-
-    recipe.id = nextId++;
-    recipe.steps = (recipe.steps||[]).map(s=>({...s, ingRefs: s.ingRefs||[]}));
-    recipes.push(recipe);
-    renderGrid(recipes);
-    closeModal('importModal');
-    document.getElementById('importUrl').value = '';
-    showDetail(recipe.id);
-  } catch(e) {
-    status.textContent = '❌ Fehler: ' + (e.message||'Rezept konnte nicht gelesen werden.');
-  } finally {
-    btn.disabled = false; btn.textContent = 'Importieren';
-  }
-}
-
 document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+async function doImport(){
+  const text=document.getElementById('importText').value.trim();if(!text)return;
+  const btn=document.getElementById('importBtn'),status=document.getElementById('importStatus');
+  btn.disabled=true;btn.textContent='⏳ Analysiere…';
+  status.style.display='block';status.textContent='KI verarbeitet das Rezept…';
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-iab':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:[{role:'user',content:`Extrahiere das Rezept aus diesem Text und antworte NUR mit einem JSON-Objekt (kein Markdown, kein Text davor/danach):\n{"emoji":"passendes Emoji","title":"Rezeptname","time":"z.B. 30 Min","servings":4,"tags":["Hauptgericht"],"equipment":[{"icon":"🍳","name":"Gerät"}],"ingredients":[{"name":"Zutat","unit":"g","base":200}],"steps":[{"text":"Schritt","tip":null,"timer":null,"type":"cook","ingRefs":[]}]}\nRegeln: tags nur aus [Frühstück,Hauptgericht,Dessert,Drinks] · type cook=aktiv kochen, wait=warten/ruhen · timer=Sekunden als Zahl oder null\n\nText: ${text.substring(0,4000)}`}]})});
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message||'API Fehler');
+    const raw=data.content?.[0]?.text||'';
+    const m=raw.match(/\{[\s\S]*\}/);if(!m)throw new Error('Kein Rezept gefunden');
+    const recipe=JSON.parse(m[0]);
+    recipe.id=nextId++;recipe.steps=(recipe.steps||[]).map(s=>({...s,ingRefs:s.ingRefs||[]}));
+    recipes.push(recipe);saveCustomRecipes();renderGrid(recipes);
+    document.getElementById('importModal').classList.remove('open');document.getElementById('importText').value='';status.style.display='none';
+    showDetail(recipe.id);
+  }catch(e){status.textContent='❌ '+(e.message||'Fehler');}
+  finally{btn.disabled=false;btn.textContent='Analysieren ✨';}
+}
+
+// PWA
+const swCode=`const CACHE='rezepte-v3';self.addEventListener('install',e=>{self.skipWaiting();});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))));self.clients.claim();});self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));});`;
+if('serviceWorker' in navigator){const blob=new Blob([swCode],{type:'application/javascript'});navigator.serviceWorker.register(URL.createObjectURL(blob),{scope:'/'}).catch(()=>{});}
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;showInstallBanner();});
+function showInstallBanner(){
+  if(document.getElementById('installBanner'))return;
+  const b=document.createElement('div');b.id='installBanner';
+  b.style.cssText='position:fixed;bottom:90px;left:16px;right:16px;max-width:398px;background:var(--blue);color:white;border-radius:50px;padding:14px 18px;display:flex;align-items:center;gap:12px;z-index:300;font-family:\'DM Sans\',sans-serif;box-shadow:3px 3px 0 rgba(0,0,0,.25);animation:slideUp .3s ease';
+  b.innerHTML=`<span style="font-size:24px">🍳</span><div style="flex:1"><div style="font-weight:700;font-size:14px">App installieren</div><div style="font-size:11px;opacity:.7;margin-top:1px">Zum Homescreen hinzufügen</div></div><button onclick="installApp()" style="background:white;color:var(--blue);border:none;border-radius:50px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">Install</button><button onclick="this.closest('#installBanner').remove()" style="background:transparent;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:20px;padding:0 0 0 6px;line-height:1">×</button>`;
+  document.body.appendChild(b);
+}
+async function installApp(){if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;const b=document.getElementById('installBanner');if(b)b.remove();}
+window.addEventListener('appinstalled',()=>{const b=document.getElementById('installBanner');if(b)b.remove();});
 </script>
 </body>
 </html>
